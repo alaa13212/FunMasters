@@ -1,0 +1,13 @@
+﻿services:
+  funmasters:
+    image: funmasters
+    build:
+      context: .
+      dockerfile: FunMasters/FunMasters/Dockerfile
+
+  funmasters.client:
+    image: funmasters.client
+    build:
+      context: .
+      dockerfile: FunMasters/FunMasters.Client/Dockerfile
+
