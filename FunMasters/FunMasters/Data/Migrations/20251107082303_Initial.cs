@@ -32,6 +32,7 @@ namespace FunMasters.Data.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     RequirePasswordChange = table.Column<bool>(type: "boolean", nullable: false),
+                    CycleOrder = table.Column<int>(type: "integer", nullable: false),
                     UserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
@@ -50,6 +51,20 @@ namespace FunMasters.Data.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AspNetUsers", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Cycles",
+                columns: table => new
+                {
+                    CycleNumber = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    StartAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    EndAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Cycles", x => x.CycleNumber);
                 });
 
             migrationBuilder.CreateTable(
@@ -159,7 +174,7 @@ namespace FunMasters.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Suggestion",
+                name: "Suggestions",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -169,22 +184,60 @@ namespace FunMasters.Data.Migrations
                     SuggestedById = table.Column<Guid>(type: "uuid", nullable: false),
                     CreatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     ActiveAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    PlayedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    FinishedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     CycleNumber = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Suggestion", x => x.Id);
+                    table.PrimaryKey("PK_Suggestions", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Suggestion_AspNetUsers_SuggestedById",
+                        name: "FK_Suggestions_AspNetUsers_SuggestedById",
                         column: x => x.SuggestedById,
                         principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Suggestions_Cycles_CycleNumber",
+                        column: x => x.CycleNumber,
+                        principalTable: "Cycles",
+                        principalColumn: "CycleNumber");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CycleVotes",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    CycleNumber = table.Column<int>(type: "integer", nullable: false),
+                    VoterId = table.Column<Guid>(type: "uuid", nullable: false),
+                    VotedGameId = table.Column<Guid>(type: "uuid", nullable: false),
+                    CreatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CycleVotes", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CycleVotes_AspNetUsers_VoterId",
+                        column: x => x.VoterId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_CycleVotes_Cycles_CycleNumber",
+                        column: x => x.CycleNumber,
+                        principalTable: "Cycles",
+                        principalColumn: "CycleNumber",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_CycleVotes_Suggestions_VotedGameId",
+                        column: x => x.VotedGameId,
+                        principalTable: "Suggestions",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Rating",
+                name: "Ratings",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -196,17 +249,17 @@ namespace FunMasters.Data.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Rating", x => x.Id);
+                    table.PrimaryKey("PK_Ratings", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Rating_AspNetUsers_RaterId",
+                        name: "FK_Ratings_AspNetUsers_RaterId",
                         column: x => x.RaterId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_Rating_Suggestion_SuggestionId",
+                        name: "FK_Ratings_Suggestions_SuggestionId",
                         column: x => x.SuggestionId,
-                        principalTable: "Suggestion",
+                        principalTable: "Suggestions",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -249,19 +302,40 @@ namespace FunMasters.Data.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Rating_RaterId",
-                table: "Rating",
+                name: "IX_CycleVotes_CycleNumber_VoterId_VotedGameId",
+                table: "CycleVotes",
+                columns: new[] { "CycleNumber", "VoterId", "VotedGameId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CycleVotes_VotedGameId",
+                table: "CycleVotes",
+                column: "VotedGameId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CycleVotes_VoterId",
+                table: "CycleVotes",
+                column: "VoterId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Ratings_RaterId",
+                table: "Ratings",
                 column: "RaterId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Rating_SuggestionId_RaterId",
-                table: "Rating",
+                name: "IX_Ratings_SuggestionId_RaterId",
+                table: "Ratings",
                 columns: new[] { "SuggestionId", "RaterId" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Suggestion_SuggestedById",
-                table: "Suggestion",
+                name: "IX_Suggestions_CycleNumber",
+                table: "Suggestions",
+                column: "CycleNumber");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Suggestions_SuggestedById",
+                table: "Suggestions",
                 column: "SuggestedById");
         }
 
@@ -284,16 +358,22 @@ namespace FunMasters.Data.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
-                name: "Rating");
+                name: "CycleVotes");
+
+            migrationBuilder.DropTable(
+                name: "Ratings");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
-                name: "Suggestion");
+                name: "Suggestions");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");
+
+            migrationBuilder.DropTable(
+                name: "Cycles");
         }
     }
 }

@@ -1,0 +1,38 @@
+﻿
+@inject IWebHostEnvironment WebHostEnvironment
+
+@rendermode InteractiveServer
+<InputFile OnChange="OnFileSelected" accept="image/*" class="form-control mb-2"/>
+
+<button type="button" disabled="@(_browserFile == null)" @onclick="Upload" class="w-100 btn btn-lg btn-primary">Upload</button>
+
+@code {
+    private IBrowserFile? _browserFile;
+    
+    [Parameter, EditorRequired]
+    public Guid UserId { get; set; }
+    
+    private void OnFileSelected(InputFileChangeEventArgs e)
+    {
+        _browserFile = e.FileCount == 1 ? e.File : null;
+    }
+
+    private async Task Upload()
+    {
+        if(_browserFile == null)
+            return;
+        
+        var uploadsDir = Path.Combine(WebHostEnvironment.WebRootPath, "uploads");
+        Directory.CreateDirectory(uploadsDir);
+
+        var fileName = $"{UserId:n}";
+        var filePath = Path.Combine(uploadsDir, fileName);
+
+        await using var stream = new FileStream(filePath, FileMode.Create);
+        await _browserFile.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024).CopyToAsync(stream);
+        
+        stream.Close();
+        
+    }
+
+}

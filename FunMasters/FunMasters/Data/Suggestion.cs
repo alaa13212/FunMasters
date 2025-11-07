@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FunMasters.Data;
 
@@ -18,10 +19,13 @@ public class Suggestion
 
     // Active window
     public DateTime? ActiveAtUtc { get; set; }
-    public DateTime? PlayedAtUtc { get; set; }
+    public DateTime? FinishedAtUtc { get; set; }
 
     // Rating / cycle
     public int? CycleNumber { get; set; }
+    [ForeignKey(nameof(CycleNumber))]
+    public Cycle? Cycle { get; set; }
+    
     public double? AverageRating => Ratings.Count > 0 ? Ratings.Average(r => r.Score) : null;
     public int RatingsCount => Ratings.Count;
 

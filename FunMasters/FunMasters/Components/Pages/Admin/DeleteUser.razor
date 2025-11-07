@@ -1,0 +1,50 @@
+﻿@page "/admin/users/delete/{id}"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@attribute [Authorize(Roles = "Admin")]
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager Nav
+
+<h3>Delete User</h3>
+
+@if (user == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="alert alert-warning">
+        Are you sure you want to delete <strong>@user.UserName</strong> (@user.Email)?
+    </div>
+
+    <button class="btn btn-danger" @onclick="ConfirmDelete">Yes, Delete</button>
+    <button class="btn btn-secondary ms-2" @onclick="@(() => Nav.NavigateTo("/admin/users"))">Cancel</button>
+}
+
+@code {
+    [Parameter] public string? Id { get; set; }
+    private ApplicationUser? user;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id is null)
+        {
+            Nav.NavigateTo("/admin/users");
+            return;
+        }
+
+        user = await UserManager.FindByIdAsync(Id);
+        if (user == null)
+        {
+            Nav.NavigateTo("/admin/users");
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (user == null) return;
+
+        await UserManager.DeleteAsync(user);
+        Nav.NavigateTo("/admin/users");
+    }
+}

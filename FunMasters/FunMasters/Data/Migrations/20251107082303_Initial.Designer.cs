@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FunMasters.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251107080526_Initial")]
+    [Migration("20251107082303_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -37,6 +37,9 @@ namespace FunMasters.Data.Migrations
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("text");
+
+                    b.Property<int>("CycleOrder")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
@@ -93,6 +96,55 @@ namespace FunMasters.Data.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("FunMasters.Data.Cycle", b =>
+                {
+                    b.Property<int>("CycleNumber")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("CycleNumber"));
+
+                    b.Property<DateTime?>("EndAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("StartAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("CycleNumber");
+
+                    b.ToTable("Cycles");
+                });
+
+            modelBuilder.Entity("FunMasters.Data.CycleVote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("CycleNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("VotedGameId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("VoterId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VotedGameId");
+
+                    b.HasIndex("VoterId");
+
+                    b.HasIndex("CycleNumber", "VoterId", "VotedGameId")
+                        .IsUnique();
+
+                    b.ToTable("CycleVotes");
+                });
+
             modelBuilder.Entity("FunMasters.Data.Rating", b =>
                 {
                     b.Property<Guid>("Id")
@@ -122,7 +174,7 @@ namespace FunMasters.Data.Migrations
                     b.HasIndex("SuggestionId", "RaterId")
                         .IsUnique();
 
-                    b.ToTable("Rating");
+                    b.ToTable("Ratings");
                 });
 
             modelBuilder.Entity("FunMasters.Data.Suggestion", b =>
@@ -140,14 +192,14 @@ namespace FunMasters.Data.Migrations
                     b.Property<int?>("CycleNumber")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime?>("FinishedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<bool>("IsHidden")
                         .HasColumnType("boolean");
 
                     b.Property<int>("Order")
                         .HasColumnType("integer");
-
-                    b.Property<DateTime?>("PlayedAtUtc")
-                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("SuggestedById")
                         .HasColumnType("uuid");
@@ -159,9 +211,11 @@ namespace FunMasters.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CycleNumber");
+
                     b.HasIndex("SuggestedById");
 
-                    b.ToTable("Suggestion");
+                    b.ToTable("Suggestions");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
@@ -294,6 +348,33 @@ namespace FunMasters.Data.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("FunMasters.Data.CycleVote", b =>
+                {
+                    b.HasOne("FunMasters.Data.Cycle", "Cycle")
+                        .WithMany("Votes")
+                        .HasForeignKey("CycleNumber")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FunMasters.Data.Suggestion", "VotedGame")
+                        .WithMany()
+                        .HasForeignKey("VotedGameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FunMasters.Data.ApplicationUser", "Voter")
+                        .WithMany()
+                        .HasForeignKey("VoterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cycle");
+
+                    b.Navigation("VotedGame");
+
+                    b.Navigation("Voter");
+                });
+
             modelBuilder.Entity("FunMasters.Data.Rating", b =>
                 {
                     b.HasOne("FunMasters.Data.ApplicationUser", "Rater")
@@ -315,11 +396,17 @@ namespace FunMasters.Data.Migrations
 
             modelBuilder.Entity("FunMasters.Data.Suggestion", b =>
                 {
+                    b.HasOne("FunMasters.Data.Cycle", "Cycle")
+                        .WithMany("Suggestions")
+                        .HasForeignKey("CycleNumber");
+
                     b.HasOne("FunMasters.Data.ApplicationUser", "SuggestedBy")
                         .WithMany("Suggestions")
                         .HasForeignKey("SuggestedById")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Cycle");
 
                     b.Navigation("SuggestedBy");
                 });
@@ -378,6 +465,13 @@ namespace FunMasters.Data.Migrations
             modelBuilder.Entity("FunMasters.Data.ApplicationUser", b =>
                 {
                     b.Navigation("Suggestions");
+                });
+
+            modelBuilder.Entity("FunMasters.Data.Cycle", b =>
+                {
+                    b.Navigation("Suggestions");
+
+                    b.Navigation("Votes");
                 });
 
             modelBuilder.Entity("FunMasters.Data.Suggestion", b =>

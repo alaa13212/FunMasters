@@ -1,0 +1,66 @@
+﻿@page "/admin/users"
+@using FunMasters.Data
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager Nav
+@attribute [Authorize(Roles = "Admin")]
+
+<h3>Manage Users</h3>
+
+@if (_users == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>Cycle Order</th>
+            <th>Email</th>
+            <th>Display Name</th>
+            <th>Roles</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var user in _users)
+        {
+            <tr>
+                <td>@user.CycleOrder</td>
+                <td>@user.Email</td>
+                <td>@user.UserName</td>
+                <td>@string.Join(", ", _userRoles[user.Id])</td>
+                <td>
+                    <button class="btn btn-sm btn-secondary" @onclick="@(() => EditUser(user.Id))">Edit</button>
+                    <a class="btn btn-sm btn-warning" href="@($"/Admin/ChangeUserPassword/{user.Id}")">Change Password</a>
+                    <button class="btn btn-sm btn-danger" @onclick="@(() => DeleteUser(user.Id))">Delete</button>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+
+    <button class="btn btn-primary" @onclick="AddUser">Add User</button>
+}
+
+@code {
+    private List<ApplicationUser>? _users;
+    private readonly Dictionary<Guid, ICollection<string>> _userRoles = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _users = await UserManager.Users.OrderBy(u => u.CycleOrder).ToListAsync();
+        _userRoles.Clear();
+        foreach (ApplicationUser user in _users)
+        {
+            _userRoles[user.Id] = await UserManager.GetRolesAsync(user);
+        }
+    }
+
+    private void EditUser(Guid id) => Nav.NavigateTo($"/admin/users/edit/{id}");
+    private void AddUser() => Nav.NavigateTo("/admin/users/add");
+    private void DeleteUser(Guid id) => Nav.NavigateTo($"/admin/users/delete/{id}");
+}

@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace FunMasters.Data;
 
@@ -8,6 +9,7 @@ public class CycleVote
     public Guid Id { get; set; } = Guid.NewGuid();
     
     public int CycleNumber { get; set; }
+    [ForeignKey(nameof(CycleNumber))]
     public Cycle? Cycle { get; set; }
     
     public Guid VoterId { get; set; }

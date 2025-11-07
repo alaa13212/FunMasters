@@ -1,0 +1,60 @@
+﻿@page "/admin/users/add"
+@using FunMasters.Data
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager Nav
+@attribute [Authorize(Roles = "Admin")]
+
+<h3>Add User</h3>
+
+<EditForm Model="@user" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label>Email</label>
+        <InputText class="form-control" @bind-Value="user.Email" />
+    </div>
+
+    <div class="mb-3">
+        <label>Display Name</label>
+        <InputText class="form-control" @bind-Value="user.UserName" />
+    </div>
+
+    <div class="mb-3">
+        <label>Password</label>
+        <InputText class="form-control" type="password" @bind-Value="password" />
+    </div>
+
+    <div class="mb-3">
+        <label>Role</label>
+        <InputSelect class="form-control" @bind-Value="role">
+            <option value="Member">Member</option>
+            <option value="Admin">Admin</option>
+        </InputSelect>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Create</button>
+</EditForm>
+
+@code {
+    private ApplicationUser user = new();
+    private string password = "";
+    private string role = "Member";
+
+    private async Task HandleValidSubmit()
+    {
+        var result = await UserManager.CreateAsync(user, password);
+        if (result.Succeeded)
+        {
+            await UserManager.AddToRoleAsync(user, role);
+            Nav.NavigateTo("/admin/users");
+        }
+        else
+        {
+            foreach (var error in result.Errors)
+                Console.WriteLine(error.Description);
+        }
+    }
+}

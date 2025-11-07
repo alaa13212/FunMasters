@@ -1,0 +1,91 @@
+﻿@page "/admin/users/edit/{id}"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@attribute [Authorize(Roles = "Admin")]
+@inject UserManager<ApplicationUser> UserManager
+@inject RoleManager<IdentityRole<Guid>> RoleManager
+@inject NavigationManager Nav
+
+<h3>Edit User</h3>
+
+@if (user == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <EditForm Model="user" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label>Cycle Order</label>
+            <InputNumber class="form-control" @bind-Value="user.CycleOrder" />
+        </div>
+        
+        <div class="mb-3">
+            <label>Email</label>
+            <InputText class="form-control" @bind-Value="user.Email" />
+        </div>
+
+        <div class="mb-3">
+            <label>Display Name</label>
+            <InputText class="form-control" @bind-Value="user.UserName" />
+        </div>
+
+        <div class="mb-3">
+            <label>Role</label>
+            <InputSelect class="form-control" @bind-Value="selectedRole">
+                @foreach (var r in roles)
+                {
+                    <option value="@r">@r</option>
+                }
+            </InputSelect>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <button class="btn btn-secondary ms-2" @onclick="@(() => Nav.NavigateTo("/admin/users"))">Cancel</button>
+    </EditForm>
+}
+
+@code {
+    [Parameter] public string? Id { get; set; }
+    private ApplicationUser? user;
+    private string selectedRole = "";
+    private List<string> roles = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id is null)
+        {
+            Nav.NavigateTo("/admin/users");
+            return;
+        }
+
+        user = await UserManager.FindByIdAsync(Id);
+        if (user == null)
+        {
+            Nav.NavigateTo("/admin/users");
+            return;
+        }
+
+        roles = RoleManager.Roles.Select(r => r.Name!).ToList();
+        var currentRoles = await UserManager.GetRolesAsync(user);
+        selectedRole = currentRoles.FirstOrDefault() ?? "Member";
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (user is null) return;
+
+        await UserManager.UpdateAsync(user);
+
+        // Update role
+        var currentRoles = await UserManager.GetRolesAsync(user);
+        await UserManager.RemoveFromRolesAsync(user, currentRoles);
+        if (!string.IsNullOrEmpty(selectedRole))
+            await UserManager.AddToRoleAsync(user, selectedRole);
+
+        Nav.NavigateTo("/admin/users");
+    }
+}

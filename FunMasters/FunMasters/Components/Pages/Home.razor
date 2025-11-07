@@ -1,0 +1,40 @@
+﻿@page "/"
+@using FunMasters.Data
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext Db
+
+
+<h3>Current Game</h3>
+@code {
+    private Suggestion? active;
+    private List<Suggestion> queued = new();
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        active = await Db.Suggestions.Include(s => s.SuggestedBy).FirstOrDefaultAsync(s => s.ActiveAtUtc < DateTime.UtcNow && s.FinishedAtUtc > DateTime.UtcNow);
+        queued = await Db.Suggestions.Include(s => s.SuggestedBy).Where(s => s.ActiveAtUtc > DateTime.UtcNow).OrderBy(s => s.ActiveAtUtc).ToListAsync();
+    }
+}
+
+
+@if (active != null)
+{
+    <div class="card p-3">
+        <h4>@active.Title</h4>
+        <p>Suggested by @active.SuggestedBy?.UserName</p>
+    </div>
+}
+else
+{
+    <p>No active game. <a href="/queue">Start next</a></p>
+}
+
+
+<h3>Upcoming</h3>
+<ul>
+    @foreach (var s in queued)
+    {
+        <li>@s.Title — @s.SuggestedBy?.UserName</li>
+    }
+</ul>

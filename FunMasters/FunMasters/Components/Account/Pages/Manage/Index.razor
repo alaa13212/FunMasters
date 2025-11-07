@@ -1,8 +1,6 @@
 ﻿@page "/Account/Manage"
 
-@using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Identity
-@using FunMasters.Data
 
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
@@ -14,29 +12,40 @@
 <h3>Profile</h3>
 <StatusMessage/>
 
-<div class="row">
-    <div class="col-xl-6">
-        <EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
+<EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
+    <div class="row">
+        <div class="col-xl-6">
             <DataAnnotationsValidator/>
             <ValidationSummary class="text-danger" role="alert"/>
             <div class="form-floating mb-3">
-                <input type="text" value="@username" id="username" class="form-control" placeholder="Choose your username." disabled/>
-                <label for="username" class="form-label">Username</label>
+                <InputText @bind-Value="Input.Login" id="Input.Login" class="form-control" placeholder="Enter your login"/>
+                <label for="Input.Login" class="form-label">Login</label>
+                <ValidationMessage For="() => Input.Login" class="text-danger"/>
             </div>
             <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.PhoneNumber" id="Input.PhoneNumber" class="form-control" placeholder="Enter your phone number"/>
-                <label for="Input.PhoneNumber" class="form-label">Phone number</label>
-                <ValidationMessage For="() => Input.PhoneNumber" class="text-danger"/>
+                <InputText type="text" @bind-Value="@Input.DisplayName" id="username" class="form-control" placeholder="Choose your display name."/>
+                <label for="username" class="form-label">Display Name</label>
+                <ValidationMessage For="() => Input.DisplayName" class="text-danger"/>
             </div>
             <button type="submit" class="w-100 btn btn-lg btn-primary">Save</button>
-        </EditForm>
+        </div>
+        <div class="col-xl-6">
+            <div class="my-2 d-flex justify-content-center">
+                <img src="@Input.ProfileImageUrl" alt="Profile Image" style="max-width: 120px; border-radius: 50%;" />
+            </div>
+            
+            @if(user != null)
+            {
+                <ProfileImageUploader UserId="user.Id"/>
+            }
+        </div>
     </div>
-</div>
+</EditForm>
 
 @code {
-    private ApplicationUser user = default!;
+    private ApplicationUser? user;
+    private string? login;
     private string? username;
-    private string? phoneNumber;
 
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
 
@@ -45,20 +54,34 @@
     protected override async Task OnInitializedAsync()
     {
         user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+        login = await UserManager.GetEmailAsync(user);
         username = await UserManager.GetUserNameAsync(user);
-        phoneNumber = await UserManager.GetPhoneNumberAsync(user);
 
-        Input.PhoneNumber ??= phoneNumber;
+        Input.Login ??= login;
+        Input.DisplayName ??= username;
+        Input.ProfileImageUrl = $"/uploads/{user.Id:n}";
     }
 
     private async Task OnValidSubmitAsync()
     {
-        if (Input.PhoneNumber != phoneNumber)
+        if(user == null)
+            return;
+        
+        if (Input.Login != login)
         {
-            var setPhoneResult = await UserManager.SetPhoneNumberAsync(user, Input.PhoneNumber);
-            if (!setPhoneResult.Succeeded)
+            var result = await UserManager.SetEmailAsync(user, Input.Login);
+            if (!result.Succeeded)
             {
-                RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to set phone number.", HttpContext);
+                RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to set login.", HttpContext);
+            }
+        }
+        
+        if (Input.DisplayName != username)
+        {
+            var result = await UserManager.SetUserNameAsync(user, Input.DisplayName);
+            if (!result.Succeeded)
+            {
+                RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to set display name.", HttpContext);
             }
         }
 
@@ -68,9 +91,9 @@
 
     private sealed class InputModel
     {
-        [Phone]
-        [Display(Name = "Phone number")]
-        public string? PhoneNumber { get; set; }
+        public string? DisplayName { get; set; }
+        public string? Login { get; set; }
+        public string ProfileImageUrl { get; set; } = "";
     }
 
 }
