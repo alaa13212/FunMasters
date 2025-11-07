@@ -13,11 +13,11 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
         <ProjectReference Include="..\FunMasters.Client\FunMasters.Client.csproj"/>
         <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.10"/>
         <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="9.0.10"/>
         <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.10"/>
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.10"/>
         <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.10"/>
     </ItemGroup>
 
