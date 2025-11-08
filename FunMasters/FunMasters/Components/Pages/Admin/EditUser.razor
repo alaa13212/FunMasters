@@ -1,6 +1,5 @@
 ﻿@page "/admin/users/edit/{id}"
-@using Microsoft.AspNetCore.Authorization
-@using Microsoft.AspNetCore.Identity
+
 @attribute [Authorize(Roles = "Admin")]
 @inject UserManager<ApplicationUser> UserManager
 @inject RoleManager<IdentityRole<Guid>> RoleManager

@@ -1,40 +1,137 @@
 ﻿@page "/"
-@using FunMasters.Data
-@using Microsoft.EntityFrameworkCore
+@using FunMasters.Components.Pages.Rating
 @inject ApplicationDbContext Db
+@inject GameCoverStorage GameCoverStorage
+@inject UserManager<ApplicationUser> UserManager
 
 
-<h3>Current Game</h3>
-@code {
-    private Suggestion? active;
-    private List<Suggestion> queued = new();
+<h3>Game Queue</h3>
 
-
-    protected override async Task OnInitializedAsync()
-    {
-        active = await Db.Suggestions.Include(s => s.SuggestedBy).FirstOrDefaultAsync(s => s.ActiveAtUtc < DateTime.UtcNow && s.FinishedAtUtc > DateTime.UtcNow);
-        queued = await Db.Suggestions.Include(s => s.SuggestedBy).Where(s => s.ActiveAtUtc > DateTime.UtcNow).OrderBy(s => s.ActiveAtUtc).ToListAsync();
-    }
-}
-
-
-@if (active != null)
+@if (loading)
 {
-    <div class="card p-3">
-        <h4>@active.Title</h4>
-        <p>Suggested by @active.SuggestedBy?.UserName</p>
-    </div>
+    <p>Loading...</p>
 }
 else
 {
-    <p>No active game. <a href="/queue">Start next</a></p>
+    <h4>🎮 Currently Active</h4>
+    @if (active.Any())
+    {
+        <div class="active-game">
+            @foreach (var game in active)
+            {
+                <div class="card mb-3 p-3 shadow-sm">
+                    <div class="d-flex align-items-top">
+                        <img src="@GameCoverStorage.GetPublicUrl(game.Id)" alt="@game.Title" style="width:264px;height:auto; max-width: 30vw;object-fit:cover;margin-right:1rem;" />
+                        <div>
+                            <h2 class="mb-0">@game.Title</h2>
+                            <strong class="d-flex align-items-center"><img src="uploads/avatars/@game.SuggestedBy!.Id.ToString("n")" class="me-1" style="width: 20px; height: 20px; border-radius: 50%; corner-shape: squircle;"/> @game.SuggestedBy.UserName</strong>
+                            <small>Start: @game.ActiveAtUtc!.Value.ToLocalTime().ToString("yyyy-MM-dd")</small><br/>
+                            <small>End: @game.FinishedAtUtc!.Value.ToLocalTime().ToString("yyyy-MM-dd")</small>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <p><em>No active games right now.</em></p>
+    }
+    
+    <hr class="my-5"/>
+    
+    @if (_user != null)
+    {
+        <Rater User="_user" />
+    }
+    
+    <h4>📅 Upcoming Queue</h4>
+    @if (queued.Any())
+    {
+        <div class="queued-list">
+            @foreach (var game in queued)
+            {
+                <div class="card mb-2 p-2">
+                    <div class="d-flex align-items-top">
+                        <img src="@GameCoverStorage.GetPublicUrl(game.Id)" alt="@game.Title" style="width:120px;height:120px;object-fit:cover;margin-right:1rem;border-radius:8px;" />
+                        <div>
+                            <h3 class="mb-0">@game.Title</h3>
+                            <strong class="d-flex align-items-center"><img src="uploads/avatars/@game.SuggestedBy!.Id.ToString("n")" class="me-1" style="width: 20px; height: 20px; border-radius: 50%; corner-shape: squircle;"/> @game.SuggestedBy.UserName</strong>
+                            <small>Expected Start: @game.ActiveAtUtc!.Value.ToLocalTime().ToString("yyyy-MM-dd")</small><br/>
+                            <small>Expected End: @game.FinishedAtUtc!.Value.ToLocalTime().ToString("yyyy-MM-dd")</small>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <p><em>No games in the queue yet.</em></p>
+    }
+
+    <hr class="my-5"/>
+    
+    <h4>🏁 Finished Games</h4>
+    @if (finished.Any())
+    {
+        <div class="finished-list">
+            @foreach (var game in finished)
+            {
+                <div class="card mb-2 p-2">
+                    <div class="d-flex align-items-center">
+                        <img src="@GameCoverStorage.GetPublicUrl(game.Id)" alt="@game.Title" style="width:100px;height:100px;object-fit:cover;margin-right:1rem;border-radius:8px;" />
+                        <div>
+                            <h4 class="mb-0">@game.Title</h4>
+                            <strong class="d-flex align-items-center"><img src="uploads/avatars/@game.SuggestedBy!.Id.ToString("n")" class="me-1" style="width: 20px; height: 20px; border-radius: 50%; corner-shape: squircle;"/> @game.SuggestedBy.UserName</strong>
+
+                            <small>Finished at: @game.FinishedAtUtc!.Value.ToLocalTime().ToString("yyyy-MM-dd")</small><br/>
+                            <small>Average Rating: @game.AverageRating?.ToString("0.#") - @(game.AverageRating.HasValue ? ((RatingValue)(int)Math.Round(game.AverageRating.Value)).ToString() : null)</small>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <p><em>No finished games yet.</em></p>
+    }
 }
 
+@code {
+    private bool loading = true;
+    private List<Suggestion> active = [];
+    private List<Suggestion> queued = [];
+    private List<Suggestion> finished = [];
 
-<h3>Upcoming</h3>
-<ul>
-    @foreach (var s in queued)
+    private ApplicationUser? _user;
+    
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
     {
-        <li>@s.Title — @s.SuggestedBy?.UserName</li>
+        var authState = await AuthStateTask;
+        if (authState.User.Identity?.IsAuthenticated == false)
+            return;
+        
+        List<Suggestion> all = await Db.Suggestions
+            .Include(s => s.SuggestedBy)
+            .Include(s => s.Ratings)
+            .Where(s => s.Status != SuggestionStatus.Pending)
+            .OrderBy(s => s.ActiveAtUtc)
+            .ToListAsync();
+        
+        active = all.Where(s => s.Status == SuggestionStatus.Active).ToList();
+        queued = all.Where(s => s.Status == SuggestionStatus.Queued).ToList();
+        finished = all.Where(s => s.Status == SuggestionStatus.Finished).OrderByDescending(s => s.FinishedAtUtc).ToList();
+
+        loading = false;
+        
+        var user = await UserManager.GetUserAsync(authState.User);
+        if(user != null && await UserManager.IsInRoleAsync(user, "Member"))
+        {
+            _user = user;
+        }
     }
-</ul>
+}

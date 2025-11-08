@@ -11,6 +11,8 @@
 }
 else
 {
+    <button class="btn btn-lg btn-primary" @onclick="Refresh">Refresh</button>
+    
     <table class="table">
         <thead>
         <tr>
@@ -42,7 +44,7 @@ else
                     <InputDate @bind-Value="s.ActiveAtUtc" class="form-control" />
                 </td>
                 <td>
-                    <InputDate @bind-Value="s.ActiveAtUtc" class="form-control" />
+                    <InputDate @bind-Value="s.FinishedAtUtc" class="form-control" />
                 </td>
                 <td>
                     <button class="btn btn-primary btn-sm" @onclick="() => Save(s)">Save</button>
@@ -56,6 +58,9 @@ else
 @code {
     private List<Suggestion>? suggestions;
 
+    
+    
+    
     protected override async Task OnInitializedAsync()
     {
         suggestions = await Db.Suggestions
@@ -72,4 +77,10 @@ else
         
         await QueueManager.RebuildQueueAsync();
     }
+
+    private async Task Refresh()
+    {
+        await QueueManager.UpdateQueueAsync();
+    }
+
 }
