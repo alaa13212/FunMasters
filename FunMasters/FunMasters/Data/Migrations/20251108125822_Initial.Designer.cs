@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FunMasters.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251107082303_Initial")]
+    [Migration("20251108125822_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -199,6 +199,9 @@ namespace FunMasters.Data.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<int>("Order")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
                         .HasColumnType("integer");
 
                     b.Property<Guid>("SuggestedById")

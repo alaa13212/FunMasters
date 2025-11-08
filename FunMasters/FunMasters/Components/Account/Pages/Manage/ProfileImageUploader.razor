@@ -22,7 +22,7 @@
         if(_browserFile == null)
             return;
         
-        var uploadsDir = Path.Combine(WebHostEnvironment.WebRootPath, "uploads");
+        var uploadsDir = Path.Combine(WebHostEnvironment.WebRootPath, "uploads", "avatars");
         Directory.CreateDirectory(uploadsDir);
 
         var fileName = $"{UserId:n}";

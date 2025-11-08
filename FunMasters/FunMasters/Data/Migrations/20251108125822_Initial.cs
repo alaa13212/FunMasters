@@ -185,7 +185,8 @@ namespace FunMasters.Data.Migrations
                     CreatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     ActiveAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     FinishedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    CycleNumber = table.Column<int>(type: "integer", nullable: true)
+                    CycleNumber = table.Column<int>(type: "integer", nullable: true),
+                    Status = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {

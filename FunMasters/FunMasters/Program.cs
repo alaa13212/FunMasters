@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using FunMasters.Components;
 using FunMasters.Components.Account;
 using FunMasters.Data;
+using FunMasters.Jobs;
+using FunMasters.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +19,7 @@ builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
+builder.Services.AddHostedService<QueueManagerJob>();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
                        throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
@@ -37,6 +40,9 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("RequireAdmin", policy => policy.RequireRole("Admin"));
 });
 
+builder.Services.AddHttpClient<IgdbService>();
+builder.Services.AddScoped<GameCoverStorage>();
+builder.Services.AddScoped<QueueManager>();
 
 var app = builder.Build();
 
@@ -83,7 +89,7 @@ using(var scope = app.Services.CreateScope()){
         if (!await roleManager.RoleExistsAsync(role))
             await roleManager.CreateAsync(new IdentityRole<Guid>(role));
 
-    var adminEmail = "admin@trobbio.party";
+    var adminEmail = "Admin";
     var admin = await userManager.FindByEmailAsync(adminEmail);
     if (admin == null)
     {
