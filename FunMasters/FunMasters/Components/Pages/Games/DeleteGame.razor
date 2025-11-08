@@ -1,0 +1,67 @@
+﻿@page "/my-games/delete/{Id:guid}"
+@attribute [Authorize]
+@inject ApplicationDbContext Db
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager Nav
+
+<h3>Delete Suggestion</h3>
+
+@if (loading)
+{
+    <p><em>Loading…</em></p>
+}
+else if (model == null)
+{
+    <div class="alert alert-danger">Suggestion not found or you don't have permission.</div>
+}
+else
+{
+    <div class="alert alert-warning">
+        Are you sure you want to delete "<strong>@model!.Title</strong>"?
+    </div>
+
+    <button class="btn btn-danger" @onclick="ConfirmDelete">Delete</button>
+    <a class="btn btn-secondary ms-2" href="/my-games">Cancel</a>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+    private Suggestion? model;
+    private bool loading = true;
+    private Guid currentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateTask;
+
+        var user = await UserManager.GetUserAsync(auth.User);
+        if (user == null)
+        {
+            // shouldn't happen because of [Authorize] but be safe
+            Nav.NavigateTo("/Identity/Account/Login");
+            return;
+        }
+
+        currentUserId = user.Id;
+        
+        model = await Db.Suggestions.FirstOrDefaultAsync(s => s.Id == Id && s.SuggestedById == currentUserId);
+
+        loading = false;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (model == null) return;
+        var myGames = await Db.Suggestions.Where(s => s.SuggestedById == currentUserId && s.Order > model.Order && s.ActiveAtUtc == null).ToListAsync();
+        
+        Db.Suggestions.Remove(model);
+        foreach (var game in myGames)
+        {
+            game.Order--;
+        }
+        await Db.SaveChangesAsync();
+        
+        Nav.NavigateTo("/my-games");
+    }
+}

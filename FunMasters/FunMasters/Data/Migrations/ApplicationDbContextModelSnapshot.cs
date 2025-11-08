@@ -198,6 +198,9 @@ namespace FunMasters.Data.Migrations
                     b.Property<int>("Order")
                         .HasColumnType("integer");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("SuggestedById")
                         .HasColumnType("uuid");
 

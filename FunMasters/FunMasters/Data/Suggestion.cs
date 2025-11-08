@@ -8,7 +8,8 @@ public class Suggestion
     public Guid Id { get; set; } = Guid.NewGuid();
     
     [StringLength(255)]
-    public required string Title { get; set; }
+    [Required]
+    public string Title { get; set; } = null!;
 
     public bool IsHidden { get; set; }
     public int Order { get; set; }
@@ -26,8 +27,17 @@ public class Suggestion
     [ForeignKey(nameof(CycleNumber))]
     public Cycle? Cycle { get; set; }
     
+    public SuggestionStatus Status { get; set; }
     public double? AverageRating => Ratings.Count > 0 ? Ratings.Average(r => r.Score) : null;
     public int RatingsCount => Ratings.Count;
 
     public ICollection<Rating> Ratings { get; set; } = [];
+}
+
+public enum SuggestionStatus
+{
+    Pending,
+    Queued,
+    Active,
+    Finished,
 }

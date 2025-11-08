@@ -1,0 +1,75 @@
+﻿@page "/admin/suggestions"
+@attribute [Authorize(Roles = "Admin")]
+@inject ApplicationDbContext Db
+@inject QueueManager QueueManager
+
+<h3>Manage Suggestions</h3>
+
+@if (suggestions == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+        <tr>
+            <th>Title</th>
+            <th>Suggested By</th>
+            <th>Order</th>
+            <th>Status</th>
+            <th>Active</th>
+            <th>Finish</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var s in suggestions)
+        {
+            <tr>
+                <td>@s.Title</td>
+                <td>@s.SuggestedBy!.CycleOrder - @s.SuggestedBy.UserName</td>
+                <td>@s.Order</td>
+                <td>
+                    <select @bind="s.Status" class="form-select">
+                        @foreach (SuggestionStatus status in Enum.GetValues(typeof(SuggestionStatus)))
+                        {
+                            <option value="@status">@status</option>
+                        }
+                    </select>
+                </td>
+                <td>
+                    <InputDate @bind-Value="s.ActiveAtUtc" class="form-control" />
+                </td>
+                <td>
+                    <InputDate @bind-Value="s.ActiveAtUtc" class="form-control" />
+                </td>
+                <td>
+                    <button class="btn btn-primary btn-sm" @onclick="() => Save(s)">Save</button>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Suggestion>? suggestions;
+
+    protected override async Task OnInitializedAsync()
+    {
+        suggestions = await Db.Suggestions
+            .Include(s => s.SuggestedBy)
+            .OrderBy(s => s.Order)
+            .ThenBy(s => s.SuggestedBy!.CycleOrder)
+            .ToListAsync();
+    }
+
+    private async Task Save(Suggestion s)
+    {
+        Db.Suggestions.Update(s);
+        await Db.SaveChangesAsync();
+        
+        await QueueManager.RebuildQueueAsync();
+    }
+}

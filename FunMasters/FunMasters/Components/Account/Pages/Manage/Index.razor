@@ -59,7 +59,7 @@
 
         Input.Login ??= login;
         Input.DisplayName ??= username;
-        Input.ProfileImageUrl = $"/uploads/{user.Id:n}";
+        Input.ProfileImageUrl = $"/uploads/avatars/{user.Id:n}";
     }
 
     private async Task OnValidSubmitAsync()

@@ -1,0 +1,87 @@
+﻿@page "/my-games"
+@attribute [Authorize]
+@inject ApplicationDbContext Db
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager Nav
+
+@if (loading) 
+{
+    <p><em>Loading…</em></p>
+}
+else
+{
+    <h3>My Game Suggestions</h3>
+    <a class="btn btn-primary mb-3" href="/my-games/add">Add Game</a>
+
+    @if (!userSuggestions.Any())
+    {
+        <p><em>No suggestions yet.</em></p>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+            <tr>
+                <th>Order</th>
+                <th>Title</th>
+                <th>Is Hidden</th>
+                <th>Added</th>
+                <th>Play Date</th>
+                <th>Finished Date</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var s in userSuggestions)
+            {
+                <tr>
+                    <td>@s.Order</td>
+                    <td>@s.Title</td>
+                    <td>@s.IsHidden</td>
+                    <td>@s.CreatedAtUtc.ToLocalTime().ToString("yyyy-M-d")</td>
+                    <td>@s.ActiveAtUtc?.ToLocalTime().ToString("yyyy-M-d")</td>
+                    <td>@s.FinishedAtUtc?.ToLocalTime().ToString("yyyy-M-d")</td>
+                    <td>@s.Status</td>
+                    <td>
+                        @if(s.Status == SuggestionStatus.Pending)
+                        {
+                            <a href="/my-games/edit/@s.Id">Edit</a>
+                            @:|
+                            <a href = "/my-games/delete/@s.Id" > Delete </a>
+                        }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+    private List<Suggestion> userSuggestions = new();
+    private bool loading = true;
+    private Guid? currentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateTask;
+        var user = await UserManager.GetUserAsync(auth.User);
+
+        if (user == null)
+        {
+            // shouldn't happen because of [Authorize] but be safe
+            Nav.NavigateTo("/Identity/Account/Login");
+            return;
+        }
+        
+        currentUserId = user!.Id;
+        userSuggestions = await Db.Suggestions
+            .Where(s => s.SuggestedById == currentUserId)
+            .OrderBy(s => s.Order)
+            .ToListAsync();
+
+        loading = false;
+    }
+}

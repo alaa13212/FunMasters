@@ -1,0 +1,136 @@
+﻿@page "/my-games/add"
+@attribute [Authorize]
+@inject ApplicationDbContext Db
+@inject IgdbService IgdbService
+@inject GameCoverStorage GameCoverStorage
+@inject QueueManager QueueManager
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager Nav
+
+<h3>Add Game Suggestion</h3>
+
+<EditForm Model="model" OnValidSubmit="HandleAdd">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-warning">@errorMessage</div>
+    }
+
+    <div class="mb-3">
+        <label class="form-label">Title</label>
+        <InputText @bind-Value="model.Title" class="form-control" />
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label">Order</label>
+        <InputNumber @bind-Value="model.Order" class="form-control" disabled/>
+    </div>
+
+    <div class="mb-3">
+        <InputCheckbox id="IsHidden"  @bind-Value="model.IsHidden" class="form-check-input" />
+        <label for="IsHidden"  class="form-label">Is Hidden</label>
+    </div>
+    <hr/>
+    <h3>Game Cover Art</h3>
+    <button type="button" class="btn btn-primary" @onclick="TryGetCoverArt">Search For Cover Art</button>
+    <div class="row">
+        @foreach (string coverArt in _suggestedCoverArts)
+        {
+            <div class="col-md-3 p-3">
+                <img src="@coverArt" class="img-fluid mb-3" />
+                <button type="button" class="btn btn-info" @onclick="@(() => PickArt(coverArt))">Pick This</button>
+            </div>
+        }
+        
+        @if (_suggestedCoverArts.Any() && coverArtUrl != null)
+        {
+            <hr/>
+        }
+        
+    </div>
+    @if (coverArtUrl != null)
+    {
+        <img src="@coverArtUrl" class="img-fluid m-3" />
+    }
+    
+    <hr/>
+    <button type="submit" class="btn btn-primary">Add</button>
+    <a class="btn btn-secondary ms-2" href="/my-games">Cancel</a>
+</EditForm>
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+    private Suggestion model = new()
+    {
+       IsHidden = true
+    };
+    private Guid currentUserId;
+    private string? errorMessage;
+    private string? coverArtUrl;
+
+    private readonly List<string> _suggestedCoverArts = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateTask;
+
+        var user = await UserManager.GetUserAsync(auth.User);
+        if (user == null)
+        {
+            // shouldn't happen because of [Authorize] but be safe
+            Nav.NavigateTo("/Identity/Account/Login");
+            return;
+        }
+
+        currentUserId = user.Id;
+        
+        var last = await Db.Suggestions
+            .Where(s => s.SuggestedById == currentUserId)
+            .OrderByDescending(s => s.Order)
+            .FirstOrDefaultAsync();
+
+
+        model.Order = last != null ? last.Order + 1 : 1;
+    }
+
+    private async Task HandleAdd()
+    {
+        errorMessage = null;
+        
+        // Insert
+        model.SuggestedById = currentUserId;
+        model.CreatedAtUtc = DateTime.UtcNow;
+
+        Db.Suggestions.Add(model);
+        await Db.SaveChangesAsync();
+
+        if (!string.IsNullOrWhiteSpace(coverArtUrl) && coverArtUrl.Contains("igdb", StringComparison.InvariantCultureIgnoreCase))
+        {
+            await GameCoverStorage.SaveCoverAsync(coverArtUrl!, model.Id);
+        }
+        
+        
+        await QueueManager.RebuildQueueAsync();
+        
+        Nav.NavigateTo("/my-games");
+    }
+
+    private async Task TryGetCoverArt()
+    {
+        _suggestedCoverArts.Clear();
+        
+        List<IgdbGame> igdbGames = await IgdbService.SearchGamesAsync(model.Title);
+        List<string> coverUrls = await IgdbService.GetCoverUrlAsync(igdbGames.Where(game => game.cover != null).Select(game => game.id).ToList());
+        
+        _suggestedCoverArts.AddRange(coverUrls);
+    }
+
+    private void PickArt(string coverArt)
+    {
+        _suggestedCoverArts.Clear();
+        coverArtUrl = coverArt;
+    }
+
+}
