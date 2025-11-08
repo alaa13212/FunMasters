@@ -1,0 +1,92 @@
+﻿@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject GameCoverStorage GameCoverStorage
+
+@if (_needsRating.Count > 0)
+{
+    <h4>⭐ Needs Rating</h4>
+    <p>Please rate these games</p>
+    <div class="rating-list row">
+        @foreach (var ratingRecord in _needsRating)
+        {
+            Suggestion game = ratingRecord.Game;
+            <div class="col-md-6 mb-4">
+                <div class="card p-3 ">
+                    <div class="d-flex align-items-top">
+                        <img src="@GameCoverStorage.GetPublicUrl(game.Id)" alt="@game.Title" style="height: 100%;width:130px;margin-right:1rem;border-radius:8px;"/>
+                        <div class="w-100">
+                            <h3 class="mb-0">@game.Title</h3>
+                            <strong class="d-flex align-items-center"><img src="uploads/avatars/@game.SuggestedBy!.Id.ToString("n")" class="me-1" style="width: 20px; height: 20px; border-radius: 50%; corner-shape: squircle;"/> @game.SuggestedBy.UserName</strong><br/>
+                            <EditForm Model="ratingRecord" method="post" OnValidSubmit="RateGame" FormName="@("rate-" + game.Id.ToString("n"))">
+                                <DataAnnotationsValidator/>
+                                <div class="form-floating mb-3">
+                                    <InputSelect @bind-Value="ratingRecord.Score" class="form-control">
+                                        @foreach (RatingValue ratingValue in Enum.GetValues<RatingValue>().OrderDescending())
+                                        {
+                                            <option value="@ratingValue">(@((int)ratingValue)) @ratingValue</option>
+                                        }
+                                    </InputSelect>
+                                    <label class="form-label">Score</label>
+                                </div>
+                                <div class="form-floating mb-3">
+                                    <InputText @bind-Value="ratingRecord.Comment" id="@("rate-comment-" + game.Id.ToString("n"))" class="form-control" placeholder="Optional"/>
+                                    <label for="@("rate-comment-" + game.Id.ToString("n"))" class="form-label">Short Comment</label>
+                                </div>
+                                <div>
+                                    <button type="submit" class="w-100 btn btn-lg btn-primary">Rate</button>
+                                </div>
+                            </EditForm>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+    <hr class="my-5"/>
+}
+
+@code {
+    [Parameter, EditorRequired] public ApplicationUser User { get; set; } = null!;
+    
+    private List<RatingRecord> _needsRating = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using ApplicationDbContext dbContext = await DbFactory.CreateDbContextAsync();
+
+        _needsRating = await dbContext.Suggestions
+            .Include(s => s.SuggestedBy)
+            .Where(s => s.Status == SuggestionStatus.Finished)
+            .Where(s => s.Ratings.All(r => r.RaterId != User.Id))
+            .OrderBy(s => s.ActiveAtUtc)
+            .Select(s => new RatingRecord(s, RatingValue.Perfect, null))
+            .ToListAsync();
+    }
+
+
+    private class RatingRecord(Suggestion game, RatingValue score = RatingValue.Perfect, string? comment = null)
+    {
+        public Suggestion Game { get; set; } = game;
+        public RatingValue Score { get; set; } = score;
+        public string? Comment { get; set; } = comment;
+        
+    }
+
+    private async Task RateGame(EditContext context)
+    {
+        RatingRecord model = (RatingRecord)context.Model;
+
+        await using ApplicationDbContext dbContext = await DbFactory.CreateDbContextAsync();
+
+        dbContext.Ratings.Add(new Rating
+        {
+            SuggestionId = model.Game.Id,
+            RaterId = User!.Id,
+            Score = (int)model.Score,
+            Comment = model.Comment,
+        });
+        await dbContext.SaveChangesAsync();
+        
+        _needsRating.Remove(model);
+    }
+
+}

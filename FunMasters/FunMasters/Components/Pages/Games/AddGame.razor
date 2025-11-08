@@ -111,7 +111,6 @@
             await GameCoverStorage.SaveCoverAsync(coverArtUrl!, model.Id);
         }
         
-        
         await QueueManager.RebuildQueueAsync();
         
         Nav.NavigateTo("/my-games");

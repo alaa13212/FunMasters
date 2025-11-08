@@ -3,6 +3,7 @@
 @inject ApplicationDbContext Db
 @inject IgdbService IgdbService
 @inject GameCoverStorage GameCoverStorage
+@inject QueueManager QueueManager
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager Nav
 
@@ -106,6 +107,8 @@ else
             await GameCoverStorage.SaveCoverAsync(coverArtUrl!, model.Id);
         }
         
+        await QueueManager.RebuildQueueAsync();
+        
         Nav.NavigateTo("/my-games");
     }
     
@@ -113,7 +116,7 @@ else
     {
         _suggestedCoverArts.Clear();
         
-        List<IgdbGame> igdbGames = await IgdbService.SearchGamesAsync(model.Title);
+        List<IgdbGame> igdbGames = await IgdbService.SearchGamesAsync(model!.Title);
         List<string> coverUrls = await IgdbService.GetCoverUrlAsync(igdbGames.Where(game => game.cover != null).Select(game => game.id).ToList());
         
         _suggestedCoverArts.AddRange(coverUrls);

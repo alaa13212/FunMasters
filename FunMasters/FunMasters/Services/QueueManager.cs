@@ -54,11 +54,17 @@ public class QueueManager(ApplicationDbContext db)
             .FirstOrDefaultAsync();
 
 
-        int cycleOrder = lastGame?.SuggestedBy?.CycleOrder ?? 1;
-        DateTime referenceTime = lastGame?.FinishedAtUtc ?? DateTime.UtcNow.Date;
+        int cycleOrder = 1;
+        DateTime referenceTime = DateTime.UtcNow.Date;
+
+        if (lastGame?.SuggestedBy != null)
+        {
+            cycleOrder = lastGame.SuggestedBy.CycleOrder + 1;
+            referenceTime = lastGame.FinishedAtUtc ?? DateTime.UtcNow.Date;
+        }
 
         var orderedUsers = users
-            .OrderBy(u => u.CycleOrder > cycleOrder ? -1 : 1)
+            .OrderBy(u => u.CycleOrder >= cycleOrder ? -1 : 1)
             .ThenBy(u => u.CycleOrder)
             .ToList();
         
@@ -76,7 +82,12 @@ public class QueueManager(ApplicationDbContext db)
                 pending.ActiveAtUtc = referenceTime;
                 referenceTime += GamePlayPeriod;
                 pending.FinishedAtUtc = referenceTime;
+                
+                if(pending.ActiveAtUtc < DateTime.UtcNow && pending.FinishedAtUtc > DateTime.UtcNow)
+                    pending.Status = SuggestionStatus.Active;
             }
         }
+        
+        await db.SaveChangesAsync();
     }
 }

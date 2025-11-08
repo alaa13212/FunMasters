@@ -1,6 +1,7 @@
 ﻿@page "/my-games/delete/{Id:guid}"
 @attribute [Authorize]
 @inject ApplicationDbContext Db
+@inject QueueManager QueueManager
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager Nav
 
@@ -62,6 +63,7 @@ else
         }
         await Db.SaveChangesAsync();
         
+        await QueueManager.RebuildQueueAsync();
         Nav.NavigateTo("/my-games");
     }
 }

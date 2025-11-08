@@ -1,0 +1,89 @@
+﻿@page "/my-ratings"
+@inject ApplicationDbContext Db
+@inject GameCoverStorage GameCoverStorage
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager Nav
+@attribute [Authorize]
+
+@if(_user != null)
+{
+    <Rater User="_user"/>
+}
+
+@if (_myRating.Count > 0)
+{
+    <h4>⭐ My Ratings</h4>
+    <div class="rating-list row">
+        @foreach (var ratingRecord in _myRating)
+        {
+            Suggestion game = ratingRecord.Suggestion!;
+            <div class="col-md-6 mb-4">
+                <div class="card p-3 ">
+                    <div class="d-flex align-items-top">
+                        <img src="@GameCoverStorage.GetPublicUrl(game.Id)" alt="@game.Title" style="height: 100%;width:130px;margin-right:1rem;border-radius:8px;"/>
+                        <div class="w-100">
+                            <h3 class="mb-0">@game.Title</h3>
+                            <strong class="d-flex align-items-center"><img src="uploads/avatars/@game.SuggestedBy!.Id.ToString("n")" class="me-1" style="width: 20px; height: 20px; border-radius: 50%; corner-shape: squircle;"/> @game.SuggestedBy.UserName</strong><br/>
+                            <EditForm Model="ratingRecord" method="post" OnValidSubmit="RateGame" FormName="@("rate-" + game.Id.ToString("n"))">
+                                <DataAnnotationsValidator/>
+                                <div class="form-floating mb-3">
+                                    <InputSelect @bind-Value="ratingRecord.Score" class="form-control">
+                                        @foreach (RatingValue ratingValue in Enum.GetValues<RatingValue>().OrderDescending())
+                                        {
+                                            <option value="@((int)ratingValue)">(@((int)ratingValue)) @ratingValue</option>
+                                        }
+                                    </InputSelect>
+                                    <label class="form-label">Score</label>
+                                </div>
+                                <div class="form-floating mb-3">
+                                    <InputText @bind-Value="ratingRecord.Comment" id="@("rate-comment-" + game.Id.ToString("n"))" class="form-control" placeholder="Optional"/>
+                                    <label for="@("rate-comment-" + game.Id.ToString("n"))" class="form-label">Short Comment</label>
+                                </div>
+                                <div>
+                                    <button type="submit" class="w-100 btn btn-lg btn-primary">Rate</button>
+                                </div>
+                            </EditForm>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<Rating> _myRating = [];
+    private ApplicationUser? _user;
+    
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateTask;
+        if (authState.User.Identity?.IsAuthenticated == false)
+            return;
+        
+        var user = await UserManager.GetUserAsync(authState.User);
+        if(user == null || !await UserManager.IsInRoleAsync(user, "Member"))
+        {
+            Nav.NavigateTo("/Identity/Account/Login");
+            return;
+        }
+
+        _user = user;
+        _myRating = await Db.Ratings
+            .Include(r => r.Suggestion!.SuggestedBy)
+            .Where(r => r.RaterId == _user.Id)
+            .OrderByDescending(r => r.CreatedAtUtc)
+            .ToListAsync();
+    }
+
+    private async Task RateGame(EditContext context)
+    {
+        Rating model = (Rating)context.Model;
+
+        Db.Update(model);
+        await Db.SaveChangesAsync();
+    }
+
+}
