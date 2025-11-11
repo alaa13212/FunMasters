@@ -25,7 +25,7 @@ else
                 <div class="flex-grow-1">
                     <h3 class="mb-3">Ratings</h3>
                     <div class="d-md-flex flex-md-row flex-lg- flex-wrap justify-content-start">
-                        @foreach (var rating in game.Ratings.OrderByDescending(r => string.IsNullOrWhiteSpace(r.Comment)? -1 : r.Comment.Length))
+                        @foreach (var rating in game.Ratings)
                         {
                             <div class="d-flex col-12 col-xxl-6 mb-md-4 pe-xxl-5 " >
                                 <img src="uploads/avatars/@rating.Rater!.Id.ToString("n")" class="me-2" style="width: 80px; height: 80px; border-radius: 50%; corner-shape: squircle;"/>
@@ -58,11 +58,14 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        game = await Db.Suggestions
+        game = await Db.Suggestions.AsNoTracking()
             .Include(s => s.SuggestedBy)
             .Include(s => s.Ratings)
             .ThenInclude(r => r.Rater)
             .FirstOrDefaultAsync(s => s.Id == Id);
+
+        if (game != null) 
+            game.Ratings = game.Ratings.OrderByDescending(r => string.IsNullOrWhiteSpace(r.Comment) ? -1 : Math.Clamp(r.Comment.Length, 0, 1)).ToList();
     }
 
 }
