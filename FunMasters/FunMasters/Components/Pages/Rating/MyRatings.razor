@@ -5,6 +5,8 @@
 @inject NavigationManager Nav
 @attribute [Authorize]
 
+<PageTitle>My Ratings</PageTitle>
+
 @if(_user != null)
 {
     <Rater User="_user"/>
@@ -19,8 +21,8 @@
             Suggestion game = ratingRecord.Suggestion!;
             <div class="col-md-6 mb-4">
                 <div class="card p-3 ">
-                    <div class="d-flex align-items-top">
-                        <img src="@GameCoverStorage.GetPublicUrl(game.Id)" alt="@game.Title" style="height: 100%;width:130px;margin-right:1rem;border-radius:8px;"/>
+                    <div class="d-flex flex-md-row flex-column align-items-top">
+                        <img src="@GameCoverStorage.GetPublicUrl(game.Id)" alt="@game.Title" class="flex-grow-1 flex-md-grow-0 mb-1"  style="height: auto;margin-right:1rem;border-radius:8px;"/>
                         <div class="w-100">
                             <h3 class="mb-0">@game.Title</h3>
                             <strong class="d-flex align-items-center"><img src="uploads/avatars/@game.SuggestedBy!.Id.ToString("n")" class="me-1" style="width: 20px; height: 20px; border-radius: 50%; corner-shape: squircle;"/> @game.SuggestedBy.UserName</strong><br/>

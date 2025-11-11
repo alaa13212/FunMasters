@@ -1,0 +1,68 @@
+﻿@page "/game/{Id:guid}"
+@inject ApplicationDbContext Db
+@inject GameCoverStorage GameCoverStorage
+
+
+@if (game == null)
+{
+    <PageTitle>404 Not Found</PageTitle>
+    <h4>Game not found 404</h4>
+}
+else
+{
+    <PageTitle>@game.Title</PageTitle>
+    <h3>Overview: @game.Title</h3>
+    <div class="card p-3 ">
+        <div class="d-flex flex-lg-row flex-column align-items-top">
+            <img src="@GameCoverStorage.GetPublicUrl(game.Id)" alt="@game.Title" class="flex-grow-1 flex-md-grow-0 mb-1" style="height: auto;margin-right:1rem;border-radius:8px;"/>
+            <div class="flex-grow-1">
+                <div class="me-md-5">
+                    <h3 class="mb-0">@game.Title</h3>
+                    Suggested By:
+                    <strong class="d-flex ms-2 align-items-center"><img src="uploads/avatars/@game.SuggestedBy!.Id.ToString("n")" class="me-1" style="width: 20px; height: 20px; border-radius: 50%; corner-shape: squircle;"/> @game.SuggestedBy.UserName</strong><br/>
+                    
+                </div>
+                <div class="flex-grow-1">
+                    <h3 class="mb-3">Ratings</h3>
+                    <div class="d-md-flex flex-md-row flex-lg- flex-wrap justify-content-start">
+                        @foreach (var rating in game.Ratings.OrderByDescending(r => string.IsNullOrWhiteSpace(r.Comment)? -1 : r.Comment.Length))
+                        {
+                            <div class="d-flex col-12 col-xxl-6 mb-md-4 pe-xxl-5 " >
+                                <img src="uploads/avatars/@rating.Rater!.Id.ToString("n")" class="me-2" style="width: 80px; height: 80px; border-radius: 50%; corner-shape: squircle;"/>
+                                <div class="d-flex flex-column flex-grow-1 justify-content-top">
+                                    <div class="d-flex flex-column flex-md-row flex-wrap justify-content-between flex-md-nowrap">
+                                        <h5 class="mb-0 text-decoration-underline">@rating.Rater!.UserName</h5> <RatingStars Rating="@rating.Score"/>
+                                    </div>
+
+                                    <p>@rating.Comment</p>
+                                </div>
+                            </div>
+
+                            if (rating != game.Ratings.Last())
+                            {
+                                <hr class="d-block d-md-none my-2"/>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+
+@code {
+    [Parameter, SupplyParameterFromQuery] public Guid Id { get; set; }
+
+    private Suggestion? game;
+
+    protected override async Task OnInitializedAsync()
+    {
+        game = await Db.Suggestions
+            .Include(s => s.SuggestedBy)
+            .Include(s => s.Ratings)
+            .ThenInclude(r => r.Rater)
+            .FirstOrDefaultAsync(s => s.Id == Id);
+    }
+
+}

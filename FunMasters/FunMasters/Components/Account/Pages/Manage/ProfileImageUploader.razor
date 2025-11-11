@@ -1,5 +1,6 @@
 ﻿
 @inject IWebHostEnvironment WebHostEnvironment
+@inject NavigationManager Nav
 
 @rendermode InteractiveServer
 <InputFile OnChange="OnFileSelected" accept="image/*" class="form-control mb-2"/>
@@ -33,6 +34,7 @@
         
         stream.Close();
         
+        Nav.Refresh(true);
     }
 
 }

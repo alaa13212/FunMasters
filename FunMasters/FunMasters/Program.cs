@@ -6,6 +6,7 @@ using FunMasters.Components.Account;
 using FunMasters.Data;
 using FunMasters.Jobs;
 using FunMasters.Services;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,6 +60,18 @@ else
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
+
+// Create a file provider with change monitoring enabled
+var uploadsPath = Path.Combine(app.Environment.WebRootPath, "uploads");
+var fileProvider = new PhysicalFileProvider(uploadsPath);
+
+// Serve static files from /uploads/avatars
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = fileProvider,
+    RequestPath = "/uploads",
+    ServeUnknownFileTypes = true
+});
 
 app.UseStaticFiles();
 app.UseHttpsRedirection();
