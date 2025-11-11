@@ -3,3 +3,6 @@ obj/
 /packages/
 riderModule.iml
 /_ReSharper.Caches/
+/FunMasters/FunMasters/wwwroot/uploads**
+/.idea/.idea.FunMasters/.idea/data_source_mapping.xml
+/.idea/.idea.FunMasters/.idea/dataSources.xml

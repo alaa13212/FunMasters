@@ -4,6 +4,7 @@
 @inject GameCoverStorage GameCoverStorage
 @inject UserManager<ApplicationUser> UserManager
 
+<PageTitle>Fun Masters</PageTitle>
 
 <h3>Game Queue</h3>
 
@@ -78,15 +79,16 @@ else
         <div class="finished-list">
             @foreach (var game in finished)
             {
-                <div class="card mb-2 p-2">
+                <div class="card mb-2 p-2 position-relative">
                     <div class="d-flex align-items-center">
                         <img src="@GameCoverStorage.GetPublicUrl(game.Id)" alt="@game.Title" style="width:100px;height:100px;object-fit:cover;margin-right:1rem;border-radius:8px;" />
                         <div>
                             <h4 class="mb-0">@game.Title</h4>
                             <strong class="d-flex align-items-center"><img src="uploads/avatars/@game.SuggestedBy!.Id.ToString("n")" class="me-1" style="width: 20px; height: 20px; border-radius: 50%; corner-shape: squircle;"/> @game.SuggestedBy.UserName</strong>
 
-                            <small>Finished at: @game.FinishedAtUtc!.Value.ToLocalTime().ToString("yyyy-MM-dd")</small><br/>
+                            <small>Finished at: @game.FinishedAtUtc!.Value.ToLocalTime().ToString("yyyy-MM-dd") -- @((int)(game.FinishedAtUtc.Value - game.ActiveAtUtc!.Value).TotalDays) Days</small><br/>
                             <small>Average Rating: @game.AverageRating?.ToString("0.#") - @(game.AverageRating.HasValue ? ((RatingValue)(int)Math.Round(game.AverageRating.Value)).ToString() : null)</small>
+                            <a href="game/@game.Id" class="stretched-link"></a>
                         </div>
                     </div>
                 </div>
@@ -106,30 +108,31 @@ else
     private List<Suggestion> finished = [];
 
     private ApplicationUser? _user;
-    
+
     [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
 
     protected override async Task OnInitializedAsync()
     {
-        var authState = await AuthStateTask;
-        if (authState.User.Identity?.IsAuthenticated == false)
-            return;
-        
+
         List<Suggestion> all = await Db.Suggestions
             .Include(s => s.SuggestedBy)
             .Include(s => s.Ratings)
             .Where(s => s.Status != SuggestionStatus.Pending)
             .OrderBy(s => s.ActiveAtUtc)
             .ToListAsync();
-        
+
         active = all.Where(s => s.Status == SuggestionStatus.Active).ToList();
         queued = all.Where(s => s.Status == SuggestionStatus.Queued).ToList();
         finished = all.Where(s => s.Status == SuggestionStatus.Finished).OrderByDescending(s => s.FinishedAtUtc).ToList();
 
         loading = false;
-        
+
+        var authState = await AuthStateTask;
+        if (authState.User.Identity?.IsAuthenticated == false)
+            return;
+
         var user = await UserManager.GetUserAsync(authState.User);
-        if(user != null && await UserManager.IsInRoleAsync(user, "Member"))
+        if (user != null && await UserManager.IsInRoleAsync(user, "Member"))
         {
             _user = user;
         }

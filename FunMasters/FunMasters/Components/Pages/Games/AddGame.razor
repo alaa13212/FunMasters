@@ -7,6 +7,8 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager Nav
 
+<PageTitle>My Games | Add</PageTitle>
+
 <h3>Add Game Suggestion</h3>
 
 <EditForm Model="model" OnValidSubmit="HandleAdd">
@@ -34,7 +36,7 @@
     </div>
     <hr/>
     <h3>Game Cover Art</h3>
-    <button type="button" class="btn btn-primary" @onclick="TryGetCoverArt">Search For Cover Art</button>
+    <button type="button" class="btn btn-primary" @onclick="TryGetCoverArt" disabled="@(string.IsNullOrWhiteSpace(model.Title) || model.Title.Length < 3)">Search For Cover Art</button>
     <div class="row">
         @foreach (string coverArt in _suggestedCoverArts)
         {
