@@ -18,6 +18,9 @@ else
             <div class="flex-grow-1">
                 <div class="me-md-5">
                     <h3 class="mb-0">@game.Title</h3>
+                    <RatingStars Rating="@(game.AverageRating.HasValue ? (int)Math.Round(game.AverageRating.Value) : 0)" Size="30"/> <br/>
+                    Average Rating: @game.AverageRating?.ToString("0.#") - @(game.AverageRating.HasValue ? ((RatingValue)(int)Math.Round(game.AverageRating.Value)).ToString() : null)
+                    <br class="my-2"/>
                     Suggested By:
                     <strong class="d-flex ms-2 align-items-center"><img src="uploads/avatars/@game.SuggestedBy!.Id.ToString("n")" class="me-1" style="width: 20px; height: 20px; border-radius: 50%; corner-shape: squircle;"/> @game.SuggestedBy.UserName</strong><br/>
                     
@@ -34,7 +37,10 @@ else
                                         <h5 class="mb-0 text-decoration-underline">@rating.Rater!.UserName</h5> <RatingStars Rating="@rating.Score"/>
                                     </div>
 
-                                    <p>@rating.Comment</p>
+                                    <p>
+                                        <text>@((RatingValue)rating.Score) - @rating.Score/10</text><br/>
+                                        @rating.Comment
+                                    </p>
                                 </div>
                             </div>
 
