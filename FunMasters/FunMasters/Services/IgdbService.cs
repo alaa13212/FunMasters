@@ -15,7 +15,7 @@ public class IgdbService
         _config = config;
     }
 
-    public async Task<string> GetAccessTokenAsync()
+    public async Task<string> GetAccessTokenAsync(CancellationToken cancellationToken)
     {
         if (_token != null && DateTime.UtcNow < _tokenExpiry)
             return _token;
@@ -24,7 +24,8 @@ public class IgdbService
         var clientSecret = _config["IGDB:ClientSecret"];
         var tokenResponse = await _http.PostAsync(
             $"https://id.twitch.tv/oauth2/token?client_id={clientId}&client_secret={clientSecret}&grant_type=client_credentials",
-            null
+            null,
+            cancellationToken
         );
 
         var data = await tokenResponse.Content.ReadFromJsonAsync<IgdbAuthResponse>()
@@ -35,9 +36,9 @@ public class IgdbService
         return _token!;
     }
     
-    public async Task<List<IgdbGame>> SearchGamesAsync(string query)
+    public async Task<List<IgdbGame>> SearchGamesAsync(string query, CancellationToken cancellationToken)
     {
-        var token = await GetAccessTokenAsync();
+        var token = await GetAccessTokenAsync(cancellationToken);
         var clientId = _config["IGDB:ClientId"];
 
         var request = new HttpRequestMessage(HttpMethod.Post, "https://api.igdb.com/v4/games");
@@ -49,15 +50,15 @@ public class IgdbService
             "text/plain"
         );
 
-        var response = await _http.SendAsync(request);
+        var response = await _http.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync();
+        var json = await response.Content.ReadAsStringAsync(cancellationToken);
         return System.Text.Json.JsonSerializer.Deserialize<List<IgdbGame>>(json) ?? [];
     }
     
-    public async Task<List<string>> GetCoverUrlAsync(List<int> coverIds)
+    public async Task<List<string>> GetCoverUrlAsync(List<int> coverIds, CancellationToken cancellationToken)
     {
-        var token = await GetAccessTokenAsync();
+        var token = await GetAccessTokenAsync(cancellationToken);
         var clientId = _config["IGDB:ClientId"];
 
         var request = new HttpRequestMessage(HttpMethod.Post, "https://api.igdb.com/v4/covers");
@@ -71,12 +72,12 @@ public class IgdbService
 
         var response = await _http.SendAsync(request);
         response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync();
+        var json = await response.Content.ReadAsStringAsync(cancellationToken);
         var covers = System.Text.Json.JsonSerializer.Deserialize<List<IgdbCover>>(json);
         
         return covers?
                    .Where(c => c.image_id != null)
-                   .Select(c => $"https://images.igdb.com/igdb/image/upload/t_cover_big/{c.image_id}.jpg")
+                   .Select(c => $"https://images.igdb.com/igdb/image/upload/t_1080p/{c.image_id}.jpg")
                    .ToList()
                ?? [];
     }

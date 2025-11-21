@@ -5,47 +5,56 @@
 @inject RoleManager<IdentityRole<Guid>> RoleManager
 @inject NavigationManager Nav
 
-<h3>Edit User</h3>
+<PageTitle>Edit User</PageTitle>
 
-@if (user == null)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{
-    <EditForm Model="user" OnValidSubmit="HandleValidSubmit">
-        <DataAnnotationsValidator />
-        <ValidationSummary />
+<div class="m-5">
+    <h3 class="text-2xl text-center md-5">Edit User</h3>
 
-        <div class="mb-3">
-            <label>Cycle Order</label>
-            <InputNumber class="form-control" @bind-Value="user.CycleOrder" />
+    <div class="card bg-base-200 shadow-sm">
+        <div class="card-body">
+
+            @if (user == null)
+            {
+                <p><em>Loading...</em></p>
+            }
+            else
+            {
+                <EditForm Model="user" OnValidSubmit="HandleValidSubmit" class="flex flex-col gap-4 w-sm">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <label class="floating-label">
+                        <span>Cycle Order</span>
+                        <InputNumber class="input" @bind-Value="user.CycleOrder" />
+                    </label>
+
+                    <label class="floating-label">
+                        <span>Email</span>
+                        <InputText class="input" @bind-Value="user.Email" />
+                    </label>
+
+                    <label class="floating-label">
+                        <span>Display Name</span>
+                        <InputText class="input" @bind-Value="user.UserName" />
+                    </label>
+                    
+                    <label class="floating-label">
+                        <span>Role</span>
+                        <InputSelect class="select" @bind-Value="selectedRole">
+                            <option value="Member">Member</option>
+                            <option value="Admin">Admin</option>
+                        </InputSelect>
+                    </label>
+
+                    <div>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                        <button class="btn btn-secondary ms-2" @onclick="@(() => Nav.NavigateTo("/admin/users"))">Cancel</button>
+                    </div>
+                </EditForm>
+            }
         </div>
-        
-        <div class="mb-3">
-            <label>Email</label>
-            <InputText class="form-control" @bind-Value="user.Email" />
-        </div>
-
-        <div class="mb-3">
-            <label>Display Name</label>
-            <InputText class="form-control" @bind-Value="user.UserName" />
-        </div>
-
-        <div class="mb-3">
-            <label>Role</label>
-            <InputSelect class="form-control" @bind-Value="selectedRole">
-                @foreach (var r in roles)
-                {
-                    <option value="@r">@r</option>
-                }
-            </InputSelect>
-        </div>
-
-        <button type="submit" class="btn btn-primary">Save Changes</button>
-        <button class="btn btn-secondary ms-2" @onclick="@(() => Nav.NavigateTo("/admin/users"))">Cancel</button>
-    </EditForm>
-}
+    </div>
+</div>
 
 @code {
     [Parameter] public string? Id { get; set; }

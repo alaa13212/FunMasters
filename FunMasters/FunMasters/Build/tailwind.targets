@@ -1,0 +1,34 @@
+﻿<Project>
+    <PropertyGroup>
+        <!-- Disable Tailwind when building inside Docker -->
+        <RunTailwind Condition="'$(DOTNET_RUNNING_IN_CONTAINER)' == 'true'">false</RunTailwind>
+    </PropertyGroup>
+    
+    <!-- Make sure Tailwind CLI exists -->
+    <Target Name="EnsureTailwind" BeforeTargets="Build"
+            Condition="'$(RunTailwind)' != 'false'">
+        <Message Text="Checking Tailwind CLI..." Importance="high" />
+
+        <!-- Windows -->
+        <Exec Command="powershell -ExecutionPolicy Bypass -File Build/check-tailwind.ps1"
+              Condition="'$(OS)' == 'Windows_NT'" />
+
+        <!-- Linux/Mac -->
+        <Exec Command="bash Build/check-tailwind.sh"
+              Condition="'$(OS)' != 'Windows_NT'" />
+    </Target>
+
+    <!-- Build Tailwind when building the project -->
+    <Target Name="BuildTailwind" AfterTargets="EnsureTailwind" BeforeTargets="Build" Condition="'$(Configuration)' == 'Release' AND '$(RunTailwind)' != 'false'">
+        <Message Text="Running Tailwind production build..." Importance="high" />
+
+        <!-- Windows -->
+        <Exec Command="Tools\tailwindcss.exe -i Styles/input.css -o wwwroot/css/site.css --minify"
+              Condition="'$(OS)' == 'Windows_NT'" />
+
+        <!-- Linux/Mac -->
+        <Exec Command="Tools/tailwindcss -i Styles/input.css -o wwwroot/css/site.css --minify"
+              Condition="'$(OS)' != 'Windows_NT'" />
+    </Target>
+
+</Project>

@@ -1,25 +1,32 @@
 ﻿@page "/admin/users/delete/{id}"
-@using Microsoft.AspNetCore.Authorization
-@using Microsoft.AspNetCore.Identity
 @attribute [Authorize(Roles = "Admin")]
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager Nav
 
-<h3>Delete User</h3>
+<PageTitle>Delete User</PageTitle>
 
-@if (user == null)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{
-    <div class="alert alert-warning">
-        Are you sure you want to delete <strong>@user.UserName</strong> (@user.Email)?
-    </div>
+<div class="m-5">
+    <h3 class="text-2xl mb-4">Delete User</h3>
 
-    <button class="btn btn-danger" @onclick="ConfirmDelete">Yes, Delete</button>
-    <button class="btn btn-secondary ms-2" @onclick="@(() => Nav.NavigateTo("/admin/users"))">Cancel</button>
-}
+    @if (user == null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <div class="alert alert-error w-max my-5">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>
+                Are you sure you want to delete <strong>@user.UserName</strong> (@user.Email)?
+            </span>
+        </div>
+
+        <button class="btn btn-error" @onclick="ConfirmDelete">Yes, Delete</button>
+        <button class="btn btn-secondary ms-2" @onclick="@(() => Nav.NavigateTo("/admin/users"))">Cancel</button>
+    }
+</div>
 
 @code {
     [Parameter] public string? Id { get; set; }

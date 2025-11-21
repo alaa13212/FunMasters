@@ -1,6 +1,5 @@
 ﻿@page "/Account/Manage"
 
-@using Microsoft.AspNetCore.Identity
 
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
@@ -8,39 +7,45 @@
 @inject IdentityRedirectManager RedirectManager
 
 <PageTitle>Profile</PageTitle>
-
-<h3>Profile</h3>
 <StatusMessage/>
 
-<EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
-    <div class="row">
-        <div class="col-xl-6">
-            <DataAnnotationsValidator/>
-            <ValidationSummary class="text-danger" role="alert"/>
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.Login" id="Input.Login" class="form-control" placeholder="Enter your login"/>
-                <label for="Input.Login" class="form-label">Login</label>
-                <ValidationMessage For="() => Input.Login" class="text-danger"/>
-            </div>
-            <div class="form-floating mb-3">
-                <InputText type="text" @bind-Value="@Input.DisplayName" id="username" class="form-control" placeholder="Choose your display name."/>
-                <label for="username" class="form-label">Display Name</label>
-                <ValidationMessage For="() => Input.DisplayName" class="text-danger"/>
-            </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Save</button>
-        </div>
-        <div class="col-xl-6">
-            <div class="my-2 d-flex justify-content-center">
-                <img src="@Input.ProfileImageUrl" alt="Profile Image" style="max-width: 120px; border-radius: 50%;" />
-            </div>
+<h3 class="text-xl mb-2">Profile</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="card bg-base-300 shadow-lg">
+        <div class="card-body items-center text-center">
             
-            @if(user != null)
+            <div class="my-2">
+                <img src="@Input.ProfileImageUrl" class="w-200px mask mask-squircle" alt="Profile Image"/>
+            </div>
+            @if (user != null)
             {
                 <ProfileImageUploader UserId="user.Id"/>
             }
         </div>
     </div>
-</EditForm>
+
+    <EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
+        <div class="card bg-base-300 shadow-lg">
+            <div class="card-body flex flex-col justify-items-stretch">
+                <DataAnnotationsValidator/>
+                <ValidationSummary class="text-error" role="alert"/>
+                <label class="floating-label mb-5 mt-3">
+                    <span>Login</span>
+                    <InputText @bind-Value="Input.Login" id="Input.Login" class="input w-full" placeholder="Enter your login"/>
+                </label>
+                <label class="floating-label mb-5">
+                    <span>Display Name</span>
+                    <InputText type="text" @bind-Value="@Input.DisplayName" id="username" class="input w-full" placeholder="Choose your display name."/>
+                </label>
+                <div class="card-actions justify-stretch">
+                    <button type="submit" class="btn btn-lg btn-primary w-full">Save</button>
+                </div>
+            </div>
+        </div>
+    </EditForm>
+    
+</div>
+
 
 @code {
     private ApplicationUser? user;

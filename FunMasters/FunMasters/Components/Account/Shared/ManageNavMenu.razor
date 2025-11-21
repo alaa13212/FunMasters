@@ -1,8 +1,17 @@
-﻿<ul class="nav nav-pills flex-column">
-    <li class="nav-item">
-        <NavLink class="nav-link" href="Account/Manage" Match="NavLinkMatch.All">Profile</NavLink>
+﻿<ul class="menu menu-lg w-full">
+    <li>
+        <NavLink ActiveClass="menu-active" href="Account/Manage" Match="NavLinkMatch.All">Profile</NavLink>
     </li>
-    <li class="nav-item">
-        <NavLink class="nav-link" href="Account/Manage/ChangePassword">Password</NavLink>
+    <li>
+        <NavLink ActiveClass="menu-active" href="Account/Manage/ChangePassword">Password</NavLink>
+    </li>
+    <li>
+        <form action="Account/Logout" method="post">
+            <AntiforgeryToken/>
+            <input type="hidden" name="ReturnUrl" value="."/>
+            <button type="submit">
+                Logout
+            </button>
+        </form>
     </li>
 </ul>

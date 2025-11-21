@@ -1,23 +1,21 @@
 ﻿<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-dark="fun-dark" data-theme-dark="fun-dark">
+    <head>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <meta name="darkreader-lock"/>
+        <base href="/"/>
+        <link rel="stylesheet" href="@Assets["css/site.css"]"/>
+        <link rel="stylesheet" href="@Assets["FunMasters.styles.css"]"/>
+        <ImportMap/>
+        <link rel="icon" type="image/png" href="favicon.png"/>
+        <HeadOutlet @rendermode="PageRenderMode"/>
+    </head>
 
-<head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <base href="/"/>
-    <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]"/>
-    <link rel="stylesheet" href="@Assets["app.css"]"/>
-    <link rel="stylesheet" href="@Assets["FunMasters.styles.css"]"/>
-    <ImportMap/>
-    <link rel="icon" type="image/png" href="favicon.png"/>
-    <HeadOutlet @rendermode="PageRenderMode"/>
-</head>
-
-<body>
-<Routes @rendermode="PageRenderMode"/>
-<script src="_framework/blazor.web.js"></script>
-</body>
-
+    <body class="pb-10 min-h-screen flex flex-col">
+        <Routes @rendermode="PageRenderMode"/>
+        <script src="_framework/blazor.web.js"></script>
+    </body>
 </html>
 
 @code {
