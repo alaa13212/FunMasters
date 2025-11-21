@@ -1,0 +1,13 @@
+﻿<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Watch" type="RunDotNetWatch" factoryName="RunDotNetWatch">
+    <option name="exePath" value="$PROJECT_DIR$/FunMasters/FunMasters/bin/Debug/net10.0/FunMasters.exe" />
+    <option name="programParameters" value="" />
+    <option name="projectFilePath" value="$PROJECT_DIR$/FunMasters/FunMasters/FunMasters.csproj" />
+    <option name="projectTfm" value="net10.0" />
+    <option name="restartOnRudeEditEditor" value="true" />
+    <option name="terminalMode" value="Auto" />
+    <option name="watchParameters" value="" />
+    <option name="workingDirectory" value="$PROJECT_DIR$/FunMasters/FunMasters" />
+    <method v="2" />
+  </configuration>
+</component>

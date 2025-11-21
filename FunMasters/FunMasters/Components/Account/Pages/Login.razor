@@ -2,51 +2,50 @@
 
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Authentication
-@using Microsoft.AspNetCore.Identity
 
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
-@inject ILogger<Login> Logger
-@inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
 <PageTitle>Log in</PageTitle>
 
-<h1>Log in</h1>
-<div class="row">
-    <div class="col-lg-6">
-        <section>
-            <StatusMessage Message="@errorMessage"/>
-            <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
-                <DataAnnotationsValidator/>
-                <hr/>
-                <ValidationSummary class="text-danger" role="alert"/>
-                <div class="form-floating mb-3">
-                    <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com"/>
-                    <label for="Input.Email" class="form-label">Login</label>
-                    <ValidationMessage For="() => Input.Email" class="text-danger"/>
-                </div>
-                <div class="form-floating mb-3">
-                    <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password"/>
-                    <label for="Input.Password" class="form-label">Password</label>
-                    <ValidationMessage For="() => Input.Password" class="text-danger"/>
-                </div>
-                <div class="checkbox mb-3">
-                    <label class="form-label">
-                        <InputCheckbox @bind-Value="Input.RememberMe" class="darker-border-checkbox form-check-input"/>
+<div class="hero bg-base-200 h-full rounded-box items-start pt-20">
+    <div class="hero-content flex-col w-full">
+        <div class="text-center lg:text-left mb-12">
+            <h1 class="text-5xl font-bold">Login now!</h1>
+        </div>
+        <div class="card bg-base-100 w-full max-w-sm shrink-0 shadow-2xl">
+            <div class="card-body">
+                <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
+                    <DataAnnotationsValidator/>
+                    <ValidationSummary class="text-error" role="alert"/>
+                    <label class="floating-label mb-5 mt-3">
+                        <span>Login</span>
+                        <InputText @bind-Value="Input.Email" id="Input.Email" class="input w-full" autocomplete="username" aria-required="true" placeholder="name@example.com"/>
+                        <ValidationMessage For="() => Input.Email" class="text-error"/>
+                    </label>
+                    <label class="floating-label mb-5">
+                        <span>Password</span>
+                        <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="input w-full" autocomplete="current-password" aria-required="true" placeholder="password"/>
+                        <ValidationMessage For="() => Input.Password" class="text-error"/>
+                    </label>
+                    <label class="label mb-3">
+                        <InputCheckbox @bind-Value="Input.RememberMe" class="checkbox"/>
                         Remember me
                     </label>
-                </div>
-                <div>
-                    <button type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
-                </div>
-            </EditForm>
-        </section>
+                    <div>
+                        <button type="submit" class="w-full btn btn-primary">Log in</button>
+                    </div>
+                </EditForm>
+            
+                <StatusMessage Message="@_errorMessage"/>
+            </div>
+        </div>
     </div>
 </div>
 
 @code {
-    private string? errorMessage;
+    private string? _errorMessage;
 
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
 
@@ -70,7 +69,7 @@
         var user = await UserManager.FindByEmailAsync(Input.Email) ;
         if (user == null)
         {
-            errorMessage = "Error: Invalid login attempt.";
+            _errorMessage = "Error: Invalid login attempt.";
             return;
         }
         
@@ -84,7 +83,6 @@
                 return;
             }
 
-            Logger.LogInformation("User logged in.");
             RedirectManager.RedirectTo(ReturnUrl);
         }
         else if (result.RequiresTwoFactor)
@@ -95,12 +93,11 @@
         }
         else if (result.IsLockedOut)
         {
-            Logger.LogWarning("User account locked out.");
             RedirectManager.RedirectTo("Account/Lockout");
         }
         else
         {
-            errorMessage = "Error: Invalid login attempt.";
+            _errorMessage = "Error: Invalid login attempt.";
         }
     }
 

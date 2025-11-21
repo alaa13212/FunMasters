@@ -1,0 +1,81 @@
+﻿@using System.Timers
+@implements IDisposable
+
+<div @attributes="AdditionalAttributes" class="grid auto-cols-full md:auto-cols-max grid-flow-col gap-5 text-center @RootClass" style="--digits: 2;">
+    <div class="max-md:flex max-md:flex-col w-max justify-around">
+        <span class="countdown font-mono text-5xl">
+            <span style="--value:@_days" aria-live="polite" aria-label="@_days">@_days</span>
+        </span>
+        days
+    </div>
+
+    <div class="max-md:flex max-md:flex-col w-max justify-around">
+        <span class="countdown font-mono text-5xl">
+            <span style="--value:@_hours" aria-live="polite" aria-label="@_hours">@_hours</span>
+        </span>
+        hours
+    </div>
+
+    <div class="max-md:flex max-md:flex-col w-max justify-around">
+        <span class="countdown font-mono text-5xl">
+            <span style="--value:@_minutes" aria-live="polite" aria-label="@_minutes">@_minutes</span>
+        </span>
+        min
+    </div>
+
+    <div class="max-md:flex max-md:flex-col w-max justify-around">
+        <span class="countdown font-mono text-5xl">
+            <span style="--value:@_seconds" aria-live="polite" aria-label="@_seconds">@_seconds</span>
+        </span>
+        sec
+    </div>
+</div>
+
+@code {
+    [Parameter] public DateTime EndDate { get; set; }
+    
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string RootClass =>
+        AdditionalAttributes != null &&
+        AdditionalAttributes.TryGetValue("class", out var cls)
+            ? cls?.ToString() ?? ""
+            : "";
+    
+    private int _days;
+    private int _hours;
+    private int _minutes;
+    private int _seconds;
+
+    private Timer? _timer;
+
+    protected override void OnInitialized()
+    {
+        _timer = new Timer(1000);
+        _timer.Elapsed += (_, _) => UpdateTime();
+        _timer.Start();
+
+        UpdateTime();
+    }
+
+    private void UpdateTime()
+    {
+        var remaining = EndDate - DateTime.Now;
+
+        if (remaining < TimeSpan.Zero)
+            remaining = TimeSpan.Zero;
+
+        _days = remaining.Days;
+        _hours = remaining.Hours;
+        _minutes = remaining.Minutes;
+        _seconds = remaining.Seconds;
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        _timer?.Dispose();
+    }
+}

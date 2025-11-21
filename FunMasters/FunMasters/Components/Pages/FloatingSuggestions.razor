@@ -5,31 +5,36 @@
 
 
 <PageTitle>Game Suggestions</PageTitle>
+<div class="m-5">
+    <h3 class="text-3xl text-center mb-2">Game Suggestion</h3>
+    <p class="text-lg text-center">List of game suggestion not queued yet</p>
+    <br/>
 
-<h3>Game Suggestion</h3>
-<p>List of game suggestion not queued yet</p>
-
-@if (loading)
-{
-    <p>loading</p>
-}
-else
-{
-    <div class="queued-list d-flex flex-wrap justify-content-center justify-content-md-start">
-        @foreach (var game in _suggestions)
-        {
-            <div class="card me-md-5 mb-3 p-0 pb-3 flex-grow-1 flex-md-grow-0" style="width: 264px;">
-                <div class="d-flex flex-column align-items-start">
-                    <img src="@GameCoverStorage.GetPublicUrl(game.Id)" alt="@game.Title" class="mb-2 w-100" style="border-radius: 4px 4px 0 0;" />
-                    <div class="px-3">
-                        <h3 class="mb-1">@game.Title</h3>
-                        <strong class="d-flex align-items-center"><img src="uploads/avatars/@game.SuggestedBy!.Id.ToString("n")" class="me-1" style="width: 20px; height: 20px; border-radius: 50%; corner-shape: squircle;"/> @game.SuggestedBy.UserName</strong>
+    @if (loading)
+    {
+        <p>loading</p>
+    }
+    else
+    {
+        <div class="grid grid-cols-1 md:grid-cols-fill-[350px] gap-5 md:gap-5">
+            @foreach (var game in _suggestions)
+            {
+                <div class="card group hover:image-full bg-base-200 shadow-2xl overflow-hidden">
+                    <figure>
+                        <img src="@GameCoverStorage.GetPublicUrl(game.Id)" alt="@game.Title" class="w-full transition-filter duration-300"/>
+                    </figure>
+                    <div class="card-body h-full flex flex-col absolute opacity-0 group-has-hover:opacity-100 transition-opacity duration-300 text-neutral-content">
+                        <h3 class="text-2xl mb-0 text-primary">@game.Title</h3>
+                        <p class="grow"></p>
+                        <p class="grow-0">
+                            Suggested By<br/><strong><img src="uploads/avatars/@game.SuggestedBy!.Id.ToString("n")" class="md:ms-1 me-1 my-2 w-6 h-6 mask mask-squircle"/> @game.SuggestedBy.UserName</strong>
+                        </p>
                     </div>
                 </div>
-            </div>
-        }
-    </div>
-}
+            }
+        </div>
+    }
+</div>
 
 @code {
     private bool loading = true;
@@ -46,6 +51,5 @@ else
             .ToListAsync();
 
         loading = false;
-        
     }
 }

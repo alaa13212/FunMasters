@@ -6,3 +6,7 @@ riderModule.iml
 /FunMasters/FunMasters/wwwroot/uploads**
 /.idea/.idea.FunMasters/.idea/data_source_mapping.xml
 /.idea/.idea.FunMasters/.idea/dataSources.xml
+
+# Auto Generated
+FunMasters/FunMasters/wwwroot/css/site.css
+FunMasters/FunMasters/Styles/daisyui*.mjs

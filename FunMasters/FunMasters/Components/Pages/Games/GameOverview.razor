@@ -3,58 +3,77 @@
 @inject GameCoverStorage GameCoverStorage
 
 
-@if (game == null)
-{
-    <PageTitle>404 Not Found</PageTitle>
-    <h4>Game not found 404</h4>
-}
-else
-{
-    <PageTitle>@game.Title</PageTitle>
-    <h3>Overview: @game.Title</h3>
-    <div class="card p-3 ">
-        <div class="d-flex flex-lg-row flex-column align-items-top">
-            <img src="@GameCoverStorage.GetPublicUrl(game.Id)" alt="@game.Title" class="flex-grow-1 flex-md-grow-0 mb-1" style="height: auto;margin-right:1rem;border-radius:8px;"/>
-            <div class="flex-grow-1">
-                <div class="me-md-5">
-                    <h3 class="mb-0">@game.Title</h3>
-                    <RatingStars Rating="@(game.AverageRating.HasValue ? (int)Math.Round(game.AverageRating.Value) : 0)" Size="30"/> <br/>
-                    Average Rating: @game.AverageRating?.ToString("0.#") - @(game.AverageRating.HasValue ? ((RatingValue)(int)Math.Round(game.AverageRating.Value)).ToString() : null)
-                    <br class="my-2"/>
-                    Suggested By:
-                    <strong class="d-flex ms-2 align-items-center"><img src="uploads/avatars/@game.SuggestedBy!.Id.ToString("n")" class="me-1" style="width: 20px; height: 20px; border-radius: 50%; corner-shape: squircle;"/> @game.SuggestedBy.UserName</strong><br/>
-                    
-                </div>
-                <div class="flex-grow-1">
-                    <h3 class="mb-3">Ratings</h3>
-                    <div class="d-md-flex flex-md-row flex-lg- flex-wrap justify-content-start">
-                        @foreach (var rating in game.Ratings)
-                        {
-                            <div class="d-flex col-12 col-xxl-6 mb-md-4 pe-xxl-5 " >
-                                <img src="uploads/avatars/@rating.Rater!.Id.ToString("n")" class="me-2" style="width: 80px; height: 80px; border-radius: 50%; corner-shape: squircle;"/>
-                                <div class="d-flex flex-column flex-grow-1 justify-content-top">
-                                    <div class="d-flex flex-column flex-md-row flex-wrap justify-content-between flex-md-nowrap">
-                                        <h5 class="mb-0 text-decoration-underline">@rating.Rater!.UserName</h5> <RatingStars Rating="@rating.Score"/>
-                                    </div>
+<div class="m-5">
 
-                                    <p>
-                                        <text>@((RatingValue)rating.Score) - @rating.Score/10</text><br/>
-                                        @rating.Comment
-                                    </p>
+    @if (game == null)
+    {
+        <PageTitle>404 Not Found</PageTitle>
+        <h4>Game not found 404</h4>
+    }
+    else
+    {
+        <PageTitle>@game.Title</PageTitle>
+        <div class="card md:card-side bg-base-200 shadow-md m-auto w-full">
+            <figure class="max-md:max-h-[40vh] min-w-[300px] lg:min-w-[450px] md:max-w-1/3 lg:max-w-2/5 xl:max-w-1/2">
+                <img src="@GameCoverStorage.GetPublicUrl(game.Id)" alt="@game.Title" class="max-md:w-full"/>
+            </figure>
+            <div class="card-body">
+                <div class="card-title flex flex-col md:flex-row justify-between items-center">
+                    <h3 class="text-4xl text-primary">@game.Title</h3>
+
+                    @if (game.AverageRating.HasValue)
+                    {
+                        <div class="flex md:flex-row-reverse items-center">
+
+                            <RatingStars Rating="@((int)Math.Round(game.AverageRating ?? 0))" class="px-2 rating-lg"/>
+                            <span
+                                class="max-md:w-0 text-xl md:text-3xl text-primary">@(game.AverageRating?.ToString("0.#") ?? "0")</span>
+                        </div>
+                    }
+                </div>
+                <div class="h-max">
+                    Suggested By
+                    <br/>
+                    <strong class="text-lg"><img src="uploads/avatars/@game.SuggestedBy!.Id.ToString("n")" class="md:ms-1 me-1 my-2 w-10 h-10 mask mask-squircle"/> @game.SuggestedBy.UserName</strong>
+                </div>
+                <div class="divider text-2xl">Reviews</div>
+                <div class="grid grid-cols-1 md:grid-cols-fill-[350px] gap-5">
+                    @foreach (var rating in game.Ratings)
+                    {
+                        <div class="flex flex-col">
+                            <div class="flex flex-row">
+                                <img src="uploads/avatars/@rating.Rater!.Id.ToString("n")" class="me-2 w-30 h-30 mask mask-squircle"/>
+                                <div class="flex flex-col gap-2">
+                                    <h5 class="text-xl underline">@rating.Rater!.UserName</h5>
+                                    <RatingStars Rating="@rating.Score" class="rating-sm"/>
+                                    <p>@rating.Score/10 @((RatingValue)rating.Score). @rating.Comment</p>
                                 </div>
                             </div>
+                            <div class="d-flex flex-column flex-grow-1 justify-content-top">
+                                <div
+                                    class="d-flex flex-column flex-md-row flex-wrap justify-content-between flex-md-nowrap">
 
-                            if (rating != game.Ratings.Last())
-                            {
-                                <hr class="d-block d-md-none my-2"/>
-                            }
-                        }
-                    </div>
+                                </div>
+
+                                <p>
+                                    <text></text>
+                                    <br/>
+                                    
+                                </p>
+                            </div>
+                        </div>
+
+                        @* if (rating != game.Ratings.Last()) *@
+                        @* { *@
+                        @*     <hr class="d-block d-md-none my-2"/> *@
+                        @* } *@
+                    }
                 </div>
             </div>
         </div>
-    </div>
-}
+    }
+
+</div>
 
 
 @code {
@@ -70,7 +89,7 @@ else
             .ThenInclude(r => r.Rater)
             .FirstOrDefaultAsync(s => s.Id == Id);
 
-        if (game != null) 
+        if (game != null)
             game.Ratings = game.Ratings.OrderByDescending(r => string.IsNullOrWhiteSpace(r.Comment) ? -1 : Math.Clamp(r.Comment.Length, 0, 1)).ToList();
     }
 

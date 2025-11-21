@@ -1,5 +1,8 @@
 ﻿@page "/my-games/edit/{Id:guid}"
 @attribute [Authorize]
+
+@implements IDisposable
+
 @inject ApplicationDbContext Db
 @inject IgdbService IgdbService
 @inject GameCoverStorage GameCoverStorage
@@ -10,8 +13,10 @@
 
 <PageTitle>My Games | Edit</PageTitle>
 
-<h3>Edit Suggestion</h3>
 
+
+<div class="m-5">
+    <h3 class="text-2xl text-center md-5">Edit Game Suggestion</h3>
 @if (loading)
 {
     <p><em>Loading…</em></p>
@@ -20,54 +25,71 @@ else if (model == null)
 {
     <div class="alert alert-danger">Suggestion not found or you don't have permission.</div>
 }
-else
-{
-    <EditForm Model="model" OnValidSubmit="HandleSave">
-        <DataAnnotationsValidator />
-        <ValidationSummary />
+    else
+    {
+        <div class="card bg-base-200 shadow-sm">
+            <div class="card-body">
+                <EditForm Model="model" OnValidSubmit="HandleSave">
+                    <DataAnnotationsValidator/>
+                    <ValidationSummary/>
+                    <fieldset class="fieldset gap-5">
+                        <legend class="fieldset-legend">Game Details</legend>
+                        <label class="floating-label">
+                            <span>Title</span>
+                            <InputText @bind-Value="model.Title" class="input input-md"/>
+                        </label>
 
-        <div class="mb-3">
-            <label class="form-label">Title</label>
-            <InputText @bind-Value="model.Title" class="form-control" />
-        </div>
+                        <label class="floating-label">
+                            <span>Order</span>
+                            <InputNumber @bind-Value="model.Order" class="input input-md" readonly/>
+                        </label>
 
-        <div class="mb-3">
-            <label class="form-label">Order</label>
-            <InputNumber @bind-Value="model.Order" class="form-control" disabled/>
+                        <label class="label">
+                            <InputCheckbox id="IsHidden" @bind-Value="model.IsHidden" class="checkbox"/>
+                            Is Hidden
+                        </label>
+                    </fieldset>
+                    <div class="divider"></div>
+                    <h3>Game Cover Art</h3>
+                    <button type="button" class="btn btn-primary my-5" @onclick="TryGetCoverArt" disabled="@(string.IsNullOrWhiteSpace(model.Title) || model.Title.Length < 3)">Search For Cover Art</button>
+                    <div class="grid grid-cols-1 md:grid-cols-fit-[250px] gap-5">
+                        @if (_isLoadingCovers)
+                        {
+                            @for (int i = 0; i < 4; i++) {
+                                <div class="p-3 gap-5 flex flex-col items-center justify-between lg:max-w-[250px]">
+                                    <div class="skeleton w-full aspect-3/4"></div>
+                                    <div class="skeleton w-full h-12"></div>
+                                </div>
+                            }
+                        }
+                        @foreach (string coverArt in _suggestedCoverArts)
+                        {
+                            <div class="card-hover rounded-box bg-base-300 p-3 gap-5 relative flex flex-col items-center justify-between" @onclick="@(() => PickArt(coverArt))">
+                                <img src="@coverArt" class="img-fluid"/>
+                                <button type="button" class="btn btn-info w-full stretched-link">Pick This</button>
+                            </div>
+                        }
+
+                        @if (_suggestedCoverArts.Any() && coverArtUrl != null)
+                        {
+                            <hr/>
+                        }
+
+                    </div>
+                    @if (coverArtUrl != null)
+                    {
+                        <img src="@coverArtUrl" class="img-fluid m-3"/>
+                    }
+
+                    <div class="card-actions mt-5">
+                        <button type="submit" class="btn btn-primary">Save</button>
+                        <a class="btn btn-secondary ms-2" href="/my-games">Cancel</a>
+                    </div>
+                </EditForm>
+            </div>
         </div>
-        
-        <div class="mb-3">
-            <InputCheckbox id="IsHidden"  @bind-Value="model.IsHidden" class="form-check-input" />
-            <label for="IsHidden"  class="form-label">Is Hidden</label>
-        </div>
-        <hr/>
-        <h3>Game Cover Art</h3>
-        <button type="button" class="btn btn-primary" @onclick="TryGetCoverArt" disabled="@(string.IsNullOrWhiteSpace(model.Title) || model.Title.Length < 3)">Search For Cover Art</button>
-        <div class="row">
-            @foreach (string coverArt in _suggestedCoverArts)
-            {
-                <div class="col-md-3 p-3">
-                    <img src="@coverArt" class="img-fluid mb-3" />
-                    <button type="button" class="btn btn-info" @onclick="@(() => PickArt(coverArt))">Pick This</button>
-                </div>
-            }
-        
-            @if (_suggestedCoverArts.Any() && coverArtUrl != null)
-            {
-                <hr/>
-            }
-        
-        </div>
-        @if (coverArtUrl != null)
-        {
-            <img src="@coverArtUrl" class="img-fluid m-3" />
-        }
-    
-        <hr/>
-        <button class="btn btn-primary">Save</button>
-        <a class="btn btn-secondary ms-2" href="/my-games">Cancel</a>
-    </EditForm>
-}
+    }
+</div>
 
 @code {
     [Parameter] public Guid Id { get; set; }
@@ -77,10 +99,17 @@ else
     private Guid currentUserId;
     
     private string? coverArtUrl;
+    private bool _isLoadingCovers;
+    
+    private CancellationTokenSource? _cts;
+    protected CancellationToken CancellationToken => _cts?.Token ?? CancellationToken.None;
+
     private readonly List<string> _suggestedCoverArts = [];
 
     protected override async Task OnInitializedAsync()
     {
+        StartOperation();
+        
         var auth = await AuthStateTask;
 
         var user = await UserManager.GetUserAsync(auth.User);
@@ -92,7 +121,7 @@ else
         }
 
         currentUserId = user.Id;
-        model = await Db.Suggestions.FirstOrDefaultAsync(s => s.Id == Id && s.SuggestedById == currentUserId);
+        model = await Db.Suggestions.FirstOrDefaultAsync(s => s.Id == Id && s.SuggestedById == currentUserId, CancellationToken);
         if(model != null)
             coverArtUrl = GameCoverStorage.GetPublicUrl(model!.Id);
 
@@ -101,9 +130,11 @@ else
 
     private async Task HandleSave()
     {
+        StartOperation();
+        
         if (model == null) return;
         // only owner can edit - already enforced by query
-        await Db.SaveChangesAsync();
+        await Db.SaveChangesAsync(CancellationToken);
         
         if (!string.IsNullOrWhiteSpace(coverArtUrl) && coverArtUrl.Contains("igdb", StringComparison.InvariantCultureIgnoreCase))
         {
@@ -117,11 +148,14 @@ else
     
     private async Task TryGetCoverArt()
     {
+        StartOperation();
+        _isLoadingCovers = true;
         _suggestedCoverArts.Clear();
         
-        List<IgdbGame> igdbGames = await IgdbService.SearchGamesAsync(model!.Title);
-        List<string> coverUrls = await IgdbService.GetCoverUrlAsync(igdbGames.Where(game => game.cover != null).Select(game => game.id).ToList());
+        List<IgdbGame> igdbGames = await IgdbService.SearchGamesAsync(model.Title, CancellationToken);
+        List<string> coverUrls = await IgdbService.GetCoverUrlAsync(igdbGames.Where(game => game.cover != null).Select(game => game.id).ToList(), CancellationToken);
         
+        _isLoadingCovers = false;
         _suggestedCoverArts.AddRange(coverUrls);
     }
 
@@ -130,4 +164,26 @@ else
         _suggestedCoverArts.Clear();
         coverArtUrl = coverArt;
     }
+    
+    private void StartOperation()
+    {
+        if(_cts != null)
+        {
+            _cts.Cancel();
+            _cts.Dispose();
+        }
+        _cts = new CancellationTokenSource();
+    }
+
+    public void Dispose()
+    {
+        GC.SuppressFinalize(this);
+        if(_cts != null)
+        {
+            _cts.Cancel();
+            _cts.Dispose();
+            _cts = null;
+        }
+    }
+
 }

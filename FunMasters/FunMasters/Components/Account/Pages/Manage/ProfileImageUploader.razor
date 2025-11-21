@@ -3,9 +3,10 @@
 @inject NavigationManager Nav
 
 @rendermode InteractiveServer
-<InputFile OnChange="OnFileSelected" accept="image/*" class="form-control mb-2"/>
 
-<button type="button" disabled="@(_browserFile == null)" @onclick="Upload" class="w-100 btn btn-lg btn-primary">Upload</button>
+<InputFile OnChange="OnFileSelected" accept="image/*" class="file-input file-input-lg w-full mb-2"/>
+
+<button type="button" disabled="@(_browserFile == null)" @onclick="Upload" class="w-full btn btn-lg btn-primary">Upload</button>
 
 @code {
     private IBrowserFile? _browserFile;

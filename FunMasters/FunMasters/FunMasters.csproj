@@ -16,6 +16,8 @@
         <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.10"/>
     </ItemGroup>
 
+    <Import Project="Build/tailwind.targets" />
+    
     <ItemGroup>
       <Content Include="..\..\.dockerignore">
         <Link>.dockerignore</Link>

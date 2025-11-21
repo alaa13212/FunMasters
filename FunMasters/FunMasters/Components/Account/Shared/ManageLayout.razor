@@ -1,17 +1,18 @@
 ﻿@inherits LayoutComponentBase
 @layout MainLayout
 
-<h1>Manage your account</h1>
+<div class="px-2 md:px-5">
+    <h1 class="text-2xl my-5">Manage your account</h1>
 
-<div>
-    <h2>Change your account settings</h2>
-    <hr/>
-    <div class="row">
-        <div class="col-lg-3">
-            <ManageNavMenu/>
-        </div>
-        <div class="col-lg-9">
-            @Body
+    <div>
+        <div class="flex flex-col md:flex-row justify-items-start gap-y-4 md:gap-4">
+            <div class="card bg-base-300 shadow-lg h-max w-full md:w-1/6 justify-self-start">
+                <ManageNavMenu/>
+            </div>
+            <div class="divider md:divider-horizontal"></div>
+            <div class="w-full md:w-5/6">
+                @Body
+            </div>
         </div>
     </div>
 </div>
