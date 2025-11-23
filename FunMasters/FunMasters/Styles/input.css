@@ -100,16 +100,18 @@
 }
 
 .card-hover {
-    @apply
-    duration-250
-    ease-in-out
-    transition-all;
+    &, * {
+        @apply duration-250 ease-in-out transition-all;
+    }
 
     &:hover {
-        @apply scale-105
-        shadow-lg
+        @apply shadow-lg
         bg-base-300
         z-10;
+
+        figure img {
+            @apply scale-110;
+        }
     }
 }
 
