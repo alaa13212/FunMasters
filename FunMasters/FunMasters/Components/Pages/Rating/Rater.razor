@@ -16,7 +16,6 @@
                         </figure>
                         <div class="card-body">
                             <h3 class="text-xl mb-0 text-primary">@game.Title</h3>
-                            <p>
                                 Suggested By<br/><strong><img src="uploads/avatars/@game.SuggestedBy!.Id.ToString("n")" class="md:ms-1 me-1 my-2 w-6 h-6 mask mask-squircle"/> @game.SuggestedBy.UserName</strong>
                                 <span class="divider">My Rating</span>
                                 <EditForm Model="ratingRecord" method="post" OnValidSubmit="RateGame" FormName="@("rate-" + game.Id.ToString("n"))">
@@ -28,7 +27,7 @@
                                             <option disabled>Pick a rating</option>
                                             @foreach (RatingValue ratingValue in Enum.GetValues<RatingValue>().OrderDescending())
                                             {
-                                                <option value="@((int)ratingValue)">(@((int)ratingValue)) @ratingValue</option>
+                                                <option value="@ratingValue">(@((int)ratingValue)) @ratingValue</option>
                                             }
                                         </InputSelect>
                                     </fieldset>
@@ -44,7 +43,6 @@
                                         <button type="submit" class="btn btn-lg btn-primary w-full">Rate</button>
                                     </div>
                                 </EditForm>
-                            </p>
                         </div>
                     </div>
             </div>
