@@ -122,3 +122,12 @@
     pointer-events: auto;
     content: "";
 }
+.spoiler-text {
+    transition: all 0.3s ease-in-out;
+}
+.spoiler-on {
+    color: transparent;
+    text-shadow: 0 0 1em var(--color-base-content);
+    cursor: pointer;
+    user-select: none;
+}

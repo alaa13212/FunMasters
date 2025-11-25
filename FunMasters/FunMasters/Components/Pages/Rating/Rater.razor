@@ -1,4 +1,5 @@
-﻿@inject IDbContextFactory<ApplicationDbContext> DbFactory
+﻿@using FunMasters.Models
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject GameCoverStorage GameCoverStorage
 
 @if (_needsRating.Count > 0)
@@ -66,15 +67,6 @@
             .OrderBy(s => s.ActiveAtUtc)
             .Select(s => new RatingRecord(s, RatingValue.Perfect, null))
             .ToListAsync();
-    }
-
-
-    private class RatingRecord(Suggestion game, RatingValue score = RatingValue.Perfect, string? comment = null)
-    {
-        public Suggestion Game { get; set; } = game;
-        public RatingValue Score { get; set; } = score;
-        public string? Comment { get; set; } = comment;
-        
     }
 
     private async Task RateGame(EditContext context)

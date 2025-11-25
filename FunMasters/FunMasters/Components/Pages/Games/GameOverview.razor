@@ -1,5 +1,9 @@
-﻿@page "/game/{Id:guid}"
+﻿@page "/game/active"
+@page "/game/{Id:guid}"
+@using System.Security.Claims
+@using FunMasters.Models
 @inject ApplicationDbContext Db
+@inject NavigationManager NavigationManager
 @inject GameCoverStorage GameCoverStorage
 
 
@@ -36,37 +40,71 @@
                     <br/>
                     <strong class="text-lg"><img src="uploads/avatars/@game.SuggestedBy!.Id.ToString("n")" class="md:ms-1 me-1 my-2 w-10 h-10 mask mask-squircle"/> @game.SuggestedBy.UserName</strong>
                 </div>
+                
+                @if (game.FinishedAtUtc > DateTime.UtcNow)
+                {
+                    <div class="flex flex-col items-center content-center">
+                        <h3 class="divider text-3xl ">Playing <span class="text-[#F00] font-mono">Dead</span>line</h3>
+                        <Countdown EndDate="@game.FinishedAtUtc.Value" class="md:w-max"/>
+                    </div>
+                }
+                
+                @if (ratingRecord != null)
+                {
+                    <div class="divider text-2xl">Finished Playing? - Rate this game</div>
+                    <div class="max-w-[650px] w-full mx-auto">
+                        <EditForm Model="ratingRecord" method="post" OnValidSubmit="RateGame" FormName="@("rate-" + game.Id.ToString("n"))">
+                            <DataAnnotationsValidator/>
+                            <fieldset class="fieldset">
+                                <legend class="fieldset-legend">Score</legend>
+                                        
+                                <InputSelect @bind-Value="ratingRecord.Score" class="select w-full">
+                                    <option disabled>Pick a rating</option>
+                                    @foreach (RatingValue ratingValue in Enum.GetValues<RatingValue>().OrderDescending())
+                                    {
+                                        <option value="@ratingValue">(@((int)ratingValue)) @ratingValue</option>
+                                    }
+                                </InputSelect>
+                            </fieldset>
+                            <fieldset>
+                                <legend class="fieldset-legend">Comment</legend>
+                                <InputTextArea @bind-Value="ratingRecord.Comment" id="@("rate-comment-" + game.Id.ToString("n"))" class="textarea h-24 w-full" placeholder="Optional"/>
+
+                            </fieldset>
+                            <div class="form-floating mb-3">
+                                <label for="@("rate-comment-" + game.Id.ToString("n"))" class="form-label"></label>
+                            </div>
+                            <div>
+                                <button type="submit" class="btn btn-lg btn-primary w-full">Rate</button>
+                            </div>
+                        </EditForm>
+                    </div>
+                }
+                
                 <div class="divider text-2xl">Reviews</div>
+                @if (!game.Ratings.Any())
+                {
+                    <span class="text-center text-xl">No reviews yet</span>
+                }
                 <div class="grid grid-cols-1 md:grid-cols-fill-[350px] gap-5">
-                    @foreach (var rating in game.Ratings)
+                    @foreach (var ratingModel in _ratings)
                     {
-                        <div class="flex flex-col">
+                        var rating = ratingModel.Rating; 
+                        <div class="flex flex-col transition-all duration-300">
                             <div class="flex flex-row">
                                 <img src="uploads/avatars/@rating.Rater!.Id.ToString("n")" class="me-2 w-30 h-30 mask mask-squircle"/>
                                 <div class="flex flex-col gap-2">
                                     <h5 class="text-xl underline">@rating.Rater!.UserName</h5>
                                     <RatingStars Rating="@rating.Score" class="rating-sm"/>
-                                    <p>@rating.Score/10 @((RatingValue)rating.Score). @rating.Comment</p>
+                                    <p>@rating.Score/10 @((RatingValue)rating.Score). 
+                                        <span class="spoiler-text @(ratingModel.IsSpoiler ? "spoiler-on" : "")" @onclick="() => ratingModel.IsSpoiler = false">
+                                            @rating.Comment
+                                        </span>
+                                    </p>
                                 </div>
                             </div>
-                            <div class="d-flex flex-column flex-grow-1 justify-content-top">
-                                <div
-                                    class="d-flex flex-column flex-md-row flex-wrap justify-content-between flex-md-nowrap">
 
-                                </div>
-
-                                <p>
-                                    <text></text>
-                                    <br/>
-                                    
-                                </p>
-                            </div>
                         </div>
-
-                        @* if (rating != game.Ratings.Last()) *@
-                        @* { *@
-                        @*     <hr class="d-block d-md-none my-2"/> *@
-                        @* } *@
                     }
                 </div>
             </div>
@@ -79,18 +117,64 @@
 @code {
     [Parameter, SupplyParameterFromQuery] public Guid Id { get; set; }
 
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+    
     private Suggestion? game;
+    private Guid? myId;
+
+    private RatingRecord? ratingRecord;
+
+    private List<GameRatingViewModel> _ratings;
 
     protected override async Task OnInitializedAsync()
     {
-        game = await Db.Suggestions.AsNoTracking()
+        var authState = await AuthStateTask;
+        if (authState.User.Identity?.IsAuthenticated == true)
+            myId = Guid.TryParse(authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : null;
+        
+        var query = Db.Suggestions.AsNoTracking()
             .Include(s => s.SuggestedBy)
             .Include(s => s.Ratings)
-            .ThenInclude(r => r.Rater)
-            .FirstOrDefaultAsync(s => s.Id == Id);
+            .ThenInclude(r => r.Rater);
+
+        if (Id == Guid.Empty)
+            game = await query.FirstOrDefaultAsync(s => s.Status == SuggestionStatus.Active);
+        else
+            game = await query.FirstOrDefaultAsync(s => s.Id == Id);
 
         if (game != null)
-            game.Ratings = game.Ratings.OrderByDescending(r => string.IsNullOrWhiteSpace(r.Comment) ? -1 : Math.Clamp(r.Comment.Length, 0, 1)).ToList();
+        {
+            game.Ratings = game.Ratings.OrderByDescending(r => string.IsNullOrWhiteSpace(r.Comment) ? -1 : Math.Clamp(r.Comment.Length, 0, 1)).ThenBy(r => r.CreatedAtUtc).ToList();
+            bool hasNoRatings = myId != null && game.Ratings.All(r => r.RaterId != myId);
+            
+            _ratings = game.Ratings.Select(r => new GameRatingViewModel(r, hasNoRatings || (myId == null && game.Status == SuggestionStatus.Active))).ToList();
+            if (hasNoRatings)
+                ratingRecord = new RatingRecord(game);
+        }
+    }
+
+    
+    private async Task RateGame(EditContext context)
+    {
+        RatingRecord model = (RatingRecord)context.Model;
+
+        Db.Ratings.Add(new Rating
+        {
+            SuggestionId = model.Game.Id,
+            RaterId = myId!.Value,
+            Score = (int)model.Score,
+            Comment = model.Comment,
+        });
+        
+        await Db.SaveChangesAsync();
+        
+        NavigationManager.Refresh(true);
+    }
+
+    private class GameRatingViewModel(Rating rating, bool isSpoiler)
+    {
+        public Rating Rating { get; set; } = rating;
+        public bool IsSpoiler { get; set; } = isSpoiler;
     }
 
 }

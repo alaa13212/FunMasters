@@ -14,7 +14,7 @@
     {
         @if (active != null)
         {
-            <div class="card md:card-side bg-base-200 shadow-2xl max-w-[1000px] m-auto">
+            <div class="card md:card-side bg-base-200 shadow-2xl max-w-[1000px] m-auto card-hover">
                 <figure>
                     <img class="w-full md:w-max md:h-[35vh]" src="@GameCoverStorage.GetPublicUrl(active.Id)" alt="@active.Title"/>
                 </figure>
@@ -32,9 +32,10 @@
                     {
                         <div class="flex flex-col items-center content-center">
                             <h3 class="text-3xl my-2">Playing <span class="text-[#F00] font-mono">Dead</span>line</h3>
-                            <Countdown EndDate="@active.FinishedAtUtc.Value" class="w-full md:w-max"/>
+                            <Countdown EndDate="@active.FinishedAtUtc.Value" class="md:w-max"/>
                         </div>
                     }
+                    <a href="game/active" class="absolute inset-0"></a>
                 </div>
             </div>
 
