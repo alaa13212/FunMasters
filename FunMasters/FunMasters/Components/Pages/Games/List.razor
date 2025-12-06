@@ -52,9 +52,27 @@
                                     <td>
                                         @if(s.Status == SuggestionStatus.Pending)
                                         {
-                                            <a href="/my-games/edit/@s.Id">Edit</a>
+                                            <a href="/my-games/edit/@s.Id" class="text-primary">Edit</a>
                                             @:|
-                                            <a href = "/my-games/delete/@s.Id" > Delete </a>
+                                            <a href="/my-games/delete/@s.Id" class="text-primary"> Delete </a>
+                                            if(s != userSuggestions.First(g => g.Status == SuggestionStatus.Pending))
+                                            {
+                                                @:|
+                                                <a class="cursor-pointer text-primary" @onclick="async () => await SortUp(s)">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-up inline" viewBox="0 0 16 16">
+                                                        <path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708z"/>
+                                                    </svg>
+                                                </a>
+                                            }
+                                            if(s != userSuggestions.Last())
+                                            {
+                                                @:|
+                                                <a class="cursor-pointer text-primary" @onclick="async () => await SortDown(s)">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down inline" viewBox="0 0 16 16">
+                                                        <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"/>
+                                                    </svg>
+                                                </a>
+                                            }
                                         }
                                     </td>
                                 </tr>
@@ -91,12 +109,58 @@
             return;
         }
         
-        currentUserId = user!.Id;
-        userSuggestions = await Db.Suggestions
+        currentUserId = user.Id;
+        await LoadGames();
+    }
+
+    private async Task LoadGames()
+    {
+        loading = true;
+        
+        userSuggestions = await Db.Suggestions.AsNoTracking()
             .Where(s => s.SuggestedById == currentUserId)
             .OrderBy(s => s.Order)
             .ToListAsync();
 
         loading = false;
     }
+
+    private async Task SortUp(Suggestion game)
+    {
+        List<Suggestion> sortGames = await Db.Suggestions
+            .OrderBy(g => g.Order)
+            .Where(s => s.SuggestedById == currentUserId && s.Order <= game.Order && s.Status == SuggestionStatus.Pending)
+            .Take(2)
+            .ToListAsync();
+
+        var otherGame = sortGames[0];
+        var thisGame = sortGames[1];
+        
+        otherGame.Order++;
+        thisGame.Order--;
+
+        await Db.SaveChangesAsync();
+        
+        await LoadGames();
+    }
+    
+    private async Task SortDown(Suggestion game)
+    {
+        List<Suggestion> sortGames = await Db.Suggestions
+            .OrderBy(g => g.Order)
+            .Where(s => s.SuggestedById == currentUserId && s.Order >= game.Order && s.Status == SuggestionStatus.Pending)
+            .Take(2)
+            .ToListAsync();
+
+        var thisGame = sortGames[0];
+        var otherGame = sortGames[1];
+        
+        otherGame.Order--;
+        thisGame.Order++;
+
+        await Db.SaveChangesAsync();
+        
+        await LoadGames();
+    }
+
 }
