@@ -41,7 +41,7 @@
                             <tbody>
                             @foreach (var s in userSuggestions)
                             {
-                                <tr>
+                                <tr class="hover:bg-base-300">
                                     <td>@s.Order</td>
                                     <td>@s.Title</td>
                                     <td>@s.IsHidden</td>
@@ -128,13 +128,13 @@
     private async Task SortUp(Suggestion game)
     {
         List<Suggestion> sortGames = await Db.Suggestions
-            .OrderBy(g => g.Order)
+            .OrderByDescending(g => g.Order)
             .Where(s => s.SuggestedById == currentUserId && s.Order <= game.Order && s.Status == SuggestionStatus.Pending)
             .Take(2)
             .ToListAsync();
 
-        var otherGame = sortGames[0];
-        var thisGame = sortGames[1];
+        var thisGame = sortGames[0];
+        var otherGame = sortGames[1];
         
         otherGame.Order++;
         thisGame.Order--;
