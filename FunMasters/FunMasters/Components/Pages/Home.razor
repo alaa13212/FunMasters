@@ -92,18 +92,26 @@
                         <figure>
                             <img src="@GameCoverStorage.GetPublicUrl(game.Id)" alt="@game.Title" />
                         </figure>
-                        <div class="card-body max-w-[250px]">
+                        <div class="card-body">
                             <h3 class="text-xl mb-0 text-primary">@game.Title</h3>
                             
                             <p>
-                                Suggested By<br/><strong><img src="uploads/avatars/@game.SuggestedBy!.Id.ToString("n")" class="md:ms-1 me-1 my-2 w-6 h-6 mask mask-squircle"/> @game.SuggestedBy.UserName</strong>
+                                Suggested By
+                                <br/>
+                                <strong class="flex flex-row items-center gap-2">
+                                    <img src="uploads/avatars/@game.SuggestedBy!.Id.ToString("n")" class="md:ms-1 me-1 my-2 w-6 h-6 mask mask-squircle"/> 
+                                    <span class="text-nowrap text-ellipsis overflow-hidden">@game.SuggestedBy.UserName</span>
+                                </strong>
                                 
                                 @if(game.AverageRating.HasValue)
                                 {
-                                    <RatingStars Rating="@((int)Math.Round(game.AverageRating ?? 0))" class="rating-lg"/>
+                                    <div class="flex flex-col items-center gap-2">
+                                        <RatingStars Rating="@((int)Math.Round(game.AverageRating ?? 0))" class="pe-2 rating-lg"/>
+                                        <span class="text-2xl text-primary">@(game.AverageRating?.ToString("0.#") ?? "0")<small>/10</small></span>
+                                    </div>
                                 }
                             </p>
-                            <p>Finished at:<br/>@game.FinishedAtUtc!.Value.ToLocalTime().ToString("yyyy-MM-dd") - @((int)(game.FinishedAtUtc.Value - game.ActiveAtUtc!.Value).TotalDays) Days</p><br/>
+                            <span>Finished at:<br/>@game.FinishedAtUtc!.Value.ToLocalTime().ToString("yyyy-MM-dd") - @((int)(game.FinishedAtUtc.Value - game.ActiveAtUtc!.Value).TotalDays) Days</span><br/>
                             <a href="game/@game.Id" class="absolute inset-0"></a>
                         </div>
                     </div>
