@@ -86,8 +86,6 @@
         
         Db.Suggestions.Update(s);
         await Db.SaveChangesAsync();
-        
-        await QueueManager.RebuildQueueAsync();
     }
 
     private async Task Refresh()
