@@ -72,20 +72,24 @@ public class QueueManager(ApplicationDbContext db)
         foreach (var user in orderedUsers)
         {
             var pending = await db.Suggestions
-                .Where(s => s.SuggestedById == user.Id && s.Status != SuggestionStatus.Finished && s.Status != SuggestionStatus.Active)
+                .Where(s => s.SuggestedById == user.Id && s.Status != SuggestionStatus.Finished)
                 .OrderBy(s => s.Order)
                 .FirstOrDefaultAsync();
 
-            if (pending != null)
-            {
-                pending.Status = SuggestionStatus.Queued;
-                pending.ActiveAtUtc = referenceTime;
-                referenceTime += GamePlayPeriod;
-                pending.FinishedAtUtc = referenceTime;
+            if (pending == null)
+                continue;
+            
+            if(pending.Status == SuggestionStatus.Active)
+                continue;
                 
-                if(pending.ActiveAtUtc < DateTime.UtcNow && pending.FinishedAtUtc > DateTime.UtcNow)
-                    pending.Status = SuggestionStatus.Active;
-            }
+            pending.Status = SuggestionStatus.Queued;
+            pending.ActiveAtUtc = referenceTime;
+            referenceTime += GamePlayPeriod;
+            pending.FinishedAtUtc = referenceTime;
+                
+            if(pending.ActiveAtUtc < DateTime.UtcNow && pending.FinishedAtUtc > DateTime.UtcNow)
+                pending.Status = SuggestionStatus.Active;
+            
         }
         
         await db.SaveChangesAsync();
