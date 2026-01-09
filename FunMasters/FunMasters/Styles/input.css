@@ -92,6 +92,14 @@
 }
 */
 
+
+@custom-variant can-hover {
+    @media (hover: hover) and (pointer: fine) {
+        @slot;
+    }
+}
+
+
 @utility grid-cols-fill-* {
     grid-template-columns: repeat(auto-fill, minmax(--value([length]), 1fr));
 }
@@ -114,6 +122,18 @@
         }
     }
 }
+
+.cover-box-shadow {
+    box-shadow: inset 0 -150px 40px -47px rgba(0,0,0,0.6);
+    &:hover {
+        box-shadow: inset 0 -150px 40px -47px rgba(0,0,0,0.6), inset 0  120px 40px -47px rgba(0,0,0,0.6);
+    }
+    
+    @media (hover: none) {
+        box-shadow: inset 0 -150px 40px -47px rgba(0,0,0,0.6), inset 0  120px 40px -47px rgba(0,0,0,0.7);
+    }
+}
+
 
 .stretched-link::after {
     position: absolute;

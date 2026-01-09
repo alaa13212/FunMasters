@@ -19,12 +19,14 @@
         <div class="grid grid-cols-1 md:grid-cols-fill-[350px] gap-5 md:gap-5">
             @foreach (var game in _suggestions)
             {
-                <div class="card group hover:image-full bg-base-200 shadow-2xl overflow-hidden">
+                <div class="card group bg-base-200 shadow-2xl overflow-hidden">
                     <figure>
-                        <img src="@GameCoverStorage.GetPublicUrl(game.Id)" alt="@game.Title" class="w-full transition-filter duration-300"/>
+                        <img src="@GameCoverStorage.GetPublicUrl(game.Id)" alt="@game.Title" class="w-full"/>
                     </figure>
-                    <div class="card-body h-full flex flex-col absolute opacity-0 group-has-hover:opacity-100 transition-opacity duration-300 text-neutral-content">
-                        <h3 class="text-2xl mb-0 text-primary">@game.Title</h3>
+                    <div class="card-body h-full w-full flex flex-col absolute text-neutral-content cover-box-shadow transition-all">
+                        <h3 class="text-2xl mb-0 text-primary can-hover:opacity-0 group-has-hover:opacity-100 transition-all">
+                            @game.Title
+                        </h3>
                         <p class="grow"></p>
                         <p class="grow-0">
                             Suggested By<br/><strong><img src="uploads/avatars/@game.SuggestedBy!.Id.ToString("n")" class="md:ms-1 me-1 my-2 w-6 h-6 mask mask-squircle"/> @game.SuggestedBy.UserName</strong>
