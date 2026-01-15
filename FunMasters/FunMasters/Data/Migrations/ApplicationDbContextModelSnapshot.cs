@@ -201,6 +201,11 @@ namespace FunMasters.Data.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<string>("SteamLink")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
                     b.Property<Guid>("SuggestedById")
                         .HasColumnType("uuid");
 

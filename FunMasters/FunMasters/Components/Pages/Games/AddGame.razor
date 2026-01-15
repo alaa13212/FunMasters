@@ -54,10 +54,10 @@
                             </div>
                         }
                     }
-                    @foreach (string coverArt in _suggestedCoverArts)
-                    {
-                        <div class="card-hover rounded-box bg-base-300 p-3 gap-5 relative flex flex-col items-center justify-between" @onclick="@(() => PickArt(coverArt))">
-                            <img src="@coverArt"/>
+                    @foreach (IgdbGame coverArt in _suggestedCoverArts)
+                    { 
+                        <div class="card-hover rounded-box bg-base-300 p-3 gap-5 relative flex flex-col items-center justify-between" @onclick="@(() => PickGame(coverArt))">
+                            <img src="@coverArt.cover.url"/>
                             <button type="button" class="btn btn-info w-full stretched-link">Pick This</button>
                         </div>
                     }
@@ -93,12 +93,13 @@
     private Guid currentUserId;
     private string? errorMessage;
     private string? coverArtUrl;
+    private string steamLink;
     private bool _isLoadingCovers;
     
     private CancellationTokenSource? _cts;
     protected CancellationToken CancellationToken => _cts?.Token ?? CancellationToken.None;
 
-    private readonly List<string> _suggestedCoverArts = [];
+    private readonly List<IgdbGame> _suggestedCoverArts = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -135,7 +136,8 @@
         // Insert
         model.SuggestedById = currentUserId;
         model.CreatedAtUtc = DateTime.UtcNow;
-
+        model.SteamLink = steamLink;
+            
         Db.Suggestions.Add(model);
         await Db.SaveChangesAsync(CancellationToken);
 
@@ -156,16 +158,20 @@
         _suggestedCoverArts.Clear();
         
         List<IgdbGame> igdbGames = await IgdbService.SearchGamesAsync(model.Title, CancellationToken);
-        List<string> coverUrls = await IgdbService.GetCoverUrlAsync(igdbGames.Where(game => game.cover != null).Select(game => game.id).ToList(), CancellationToken);
-        
+        var igdbGamesWithCovers = igdbGames.Where(g => g.cover != null).ToList();
+        foreach (IgdbGame game in igdbGamesWithCovers)
+             game.cover.url = game.cover.url.Replace("t_thumb", "t_1080p");
+
         _isLoadingCovers = false;
-        _suggestedCoverArts.AddRange(coverUrls);
+        _suggestedCoverArts.AddRange(igdbGamesWithCovers);
     }
 
-    private void PickArt(string coverArt)
+    private void PickGame(IgdbGame game)
     {
         _suggestedCoverArts.Clear();
-        coverArtUrl = coverArt;
+        coverArtUrl = game.cover.url;
+        steamLink = game.websites.FirstOrDefault(w => w.url.Contains("steam"))?.url ?? "";
+        model.Title = game.name;
     }
 
     private void StartOperation()
