@@ -28,6 +28,8 @@ public class GameCoverStorage
         var fileName = $"{gameId:n}";
         var filePath = GetFilePath(fileName);
 
+        if (!sourceUrl.Contains("https:"))
+            sourceUrl = "https:" + sourceUrl;
         using var response = await _http.GetAsync(sourceUrl);
         response.EnsureSuccessStatusCode();
 
