@@ -45,7 +45,7 @@ public class IgdbService
         request.Headers.Add("Client-ID", clientId);
         request.Headers.Add("Authorization", $"Bearer {token}");
         request.Content = new StringContent(
-            $"search \"{query}\"; fields id,name,cover; limit 8;",
+            $"search \"{query}\"; fields id,name,cover, cover.url,websites,websites.url; limit 8;",
             System.Text.Encoding.UTF8,
             "text/plain"
         );
