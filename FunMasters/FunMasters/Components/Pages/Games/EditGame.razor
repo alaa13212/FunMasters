@@ -44,6 +44,11 @@ else if (model == null)
                             <InputNumber @bind-Value="model.Order" class="input input-md" readonly/>
                         </label>
 
+                        <label class="floating-label">
+                            <span>Steam link</span>
+                            <InputText @bind-Value="model.SteamLink" class="input input-md"/>
+                        </label>
+                        
                         <label class="label">
                             <InputCheckbox id="IsHidden" @bind-Value="model.IsHidden" class="checkbox"/>
                             Is Hidden
