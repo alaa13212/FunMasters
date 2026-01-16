@@ -44,6 +44,11 @@ else if (model == null)
                             <InputNumber @bind-Value="model.Order" class="input input-md" readonly/>
                         </label>
 
+                        <label class="floating-label">
+                            <span>Steam link</span>
+                            <InputText @bind-Value="model.SteamLink" class="input input-md"/>
+                        </label>
+                        
                         <label class="label">
                             <InputCheckbox id="IsHidden" @bind-Value="model.IsHidden" class="checkbox"/>
                             Is Hidden
@@ -62,10 +67,10 @@ else if (model == null)
                                 </div>
                             }
                         }
-                        @foreach (string coverArt in _suggestedCoverArts)
-                        {
-                            <div class="card-hover rounded-box bg-base-300 p-3 gap-5 relative flex flex-col items-center justify-between" @onclick="@(() => PickArt(coverArt))">
-                                <img src="@coverArt" class="img-fluid"/>
+                        @foreach (IgdbGame coverArt in _suggestedCoverArts)
+                        { 
+                            <div class="card-hover rounded-box bg-base-300 p-3 gap-5 relative flex flex-col items-center justify-between" @onclick="@(() => PickGame(coverArt))">
+                                <img src="@coverArt.cover!.url"/>
                                 <button type="button" class="btn btn-info w-full stretched-link">Pick This</button>
                             </div>
                         }
@@ -104,7 +109,7 @@ else if (model == null)
     private CancellationTokenSource? _cts;
     protected CancellationToken CancellationToken => _cts?.Token ?? CancellationToken.None;
 
-    private readonly List<string> _suggestedCoverArts = [];
+    private readonly List<IgdbGame> _suggestedCoverArts = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -148,21 +153,25 @@ else if (model == null)
     
     private async Task TryGetCoverArt()
     {
+        if(string.IsNullOrWhiteSpace(model?.Title))
+            return;
+        
         StartOperation();
         _isLoadingCovers = true;
         _suggestedCoverArts.Clear();
         
         List<IgdbGame> igdbGames = await IgdbService.SearchGamesAsync(model.Title, CancellationToken);
-        List<string> coverUrls = await IgdbService.GetCoverUrlAsync(igdbGames.Where(game => game.cover != null).Select(game => game.id).ToList(), CancellationToken);
+        _suggestedCoverArts.AddRange(igdbGames);
         
         _isLoadingCovers = false;
-        _suggestedCoverArts.AddRange(coverUrls);
     }
 
-    private void PickArt(string coverArt)
+    private void PickGame(IgdbGame game)
     {
         _suggestedCoverArts.Clear();
-        coverArtUrl = coverArt;
+        coverArtUrl = game.cover!.url;
+        model!.SteamLink = game.websites?.FirstOrDefault(w => w.url?.Contains("steam") == true)?.url ?? null;
+        model.Title = game.name;
     }
     
     private void StartOperation()

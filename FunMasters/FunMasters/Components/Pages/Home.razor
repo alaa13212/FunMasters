@@ -60,7 +60,7 @@
                 @{ int i = 1; }
                 @foreach (var game in queued)
                 {
-                    <div class="card card-side bg-base-200 grid grid-cols-2 shadow-2xl overflow-hidden">
+                    <div class="card card-side bg-base-200 grid grid-cols-2 shadow-2xl overflow-hidden card-hover">
                         <figure>
                             <img src="@GameCoverStorage.GetPublicUrl(game.Id)" alt="@game.Title"/>
                         </figure>
@@ -73,6 +73,7 @@
                             <span>Expected Start:<br/>@game.ActiveAtUtc!.Value.ToLocalTime().ToString("yyyy-MM-dd")</span>
                             <span>Expected End:<br/>@game.FinishedAtUtc!.Value.ToLocalTime().ToString("yyyy-MM-dd")</span>
                         </div>
+                        <a href="game/@game.Id" class="absolute inset-0"></a>
                     </div>
                 }
             </div>
