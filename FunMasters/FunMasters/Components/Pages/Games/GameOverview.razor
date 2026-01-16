@@ -59,72 +59,89 @@
 
                 </div>
                 
-                @if (game.FinishedAtUtc > DateTime.UtcNow)
+                @if (game.ActiveAtUtc <= DateTime.UtcNow)
                 {
-                    <div class="flex flex-col items-center content-center">
-                        <h3 class="divider text-3xl ">Playing <span class="text-[#F00] font-mono">Dead</span>line</h3>
-                        <Countdown EndDate="@game.FinishedAtUtc.Value" class="md:w-max"/>
-                    </div>
-                }
-                
-                @if (ratingRecord != null)
-                {
-                    <div class="divider text-2xl">Finished Playing? - Rate this game</div>
-                    <div class="max-w-[650px] w-full mx-auto">
-                        <EditForm Model="ratingRecord" method="post" OnValidSubmit="RateGame" FormName="@("rate-" + game.Id.ToString("n"))">
-                            <DataAnnotationsValidator/>
-                            <fieldset class="fieldset">
-                                <legend class="fieldset-legend">Score</legend>
-                                        
-                                <InputSelect @bind-Value="ratingRecord.Score" class="select w-full">
-                                    <option disabled>Pick a rating</option>
-                                    @foreach (RatingValue ratingValue in Enum.GetValues<RatingValue>().OrderDescending())
-                                    {
-                                        <option value="@ratingValue">(@((int)ratingValue)) @ratingValue</option>
-                                    }
-                                </InputSelect>
-                            </fieldset>
-                            <fieldset>
-                                <legend class="fieldset-legend">Comment</legend>
-                                <InputTextArea @bind-Value="ratingRecord.Comment" id="@("rate-comment-" + game.Id.ToString("n"))" class="textarea h-24 w-full" placeholder="Optional"/>
-
-                            </fieldset>
-                            <div class="form-floating mb-3">
-                                <label for="@("rate-comment-" + game.Id.ToString("n"))" class="form-label"></label>
-                            </div>
-                            <div>
-                                <button type="submit" class="btn btn-lg btn-primary w-full">Rate</button>
-                            </div>
-                        </EditForm>
-                    </div>
-                }
-                
-                <div class="divider text-2xl">Reviews</div>
-                @if (!game.Ratings.Any())
-                {
-                    <span class="text-center text-xl">No reviews yet</span>
-                }
-                <div class="grid grid-cols-1 md:grid-cols-fill-[350px] gap-5">
-                    @foreach (var ratingModel in _ratings)
+                    @if (game.FinishedAtUtc > DateTime.UtcNow)
                     {
-                        var rating = ratingModel.Rating; 
-                        <div class="flex flex-col transition-all duration-300">
-                            <div class="flex flex-row">
-                                <img src="uploads/avatars/@rating.Rater!.Id.ToString("n")" class="me-2 w-30 h-30 mask mask-squircle"/>
-                                <div class="flex flex-col gap-2">
-                                    <h5 class="text-xl underline">@rating.Rater!.UserName</h5>
-                                    <RatingStars Rating="@rating.Score" class="rating-sm"/>
-                                    <p>@rating.Score/10 @((RatingValue)rating.Score). 
-                                        <span class="spoiler-text @(ratingModel.IsSpoiler ? "spoiler-on" : "")" @onclick="() => ratingModel.IsSpoiler = false">
-                                            @rating.Comment
-                                        </span>
-                                    </p>
-                                </div>
-                            </div>
-
+                        <div class="flex flex-col items-center content-center">
+                            <h3 class="divider text-3xl ">Playing <span class="text-[#F00] font-mono">Dead</span>line</h3>
+                            <Countdown EndDate="@game.FinishedAtUtc.Value" class="md:w-max"/>
                         </div>
                     }
-                </div>
+
+                    @if (ratingRecord != null)
+                    {
+                        <div class="divider text-2xl">Finished Playing? - Rate this game</div>
+                        <div class="max-w-[650px] w-full mx-auto">
+                            <EditForm Model="ratingRecord" method="post" OnValidSubmit="RateGame" FormName="@("rate-" + game.Id.ToString("n"))">
+                                <DataAnnotationsValidator/>
+                                <fieldset class="fieldset">
+                                    <legend class="fieldset-legend">Score</legend>
+
+                                    <InputSelect @bind-Value="ratingRecord.Score" class="select w-full">
+                                        <option disabled>Pick a rating</option>
+                                        @foreach (RatingValue ratingValue in Enum.GetValues<RatingValue>().OrderDescending())
+                                        {
+                                            <option value="@ratingValue">(@((int)ratingValue)) @ratingValue</option>
+                                        }
+                                    </InputSelect>
+                                </fieldset>
+                                <fieldset>
+                                    <legend class="fieldset-legend">Comment</legend>
+                                    <InputTextArea @bind-Value="ratingRecord.Comment" id="@("rate-comment-" + game.Id.ToString("n"))" class="textarea h-24 w-full" placeholder="Optional"/>
+
+                                </fieldset>
+                                <div class="form-floating mb-3">
+                                    <label for="@("rate-comment-" + game.Id.ToString("n"))" class="form-label"></label>
+                                </div>
+                                <div>
+                                    <button type="submit" class="btn btn-lg btn-primary w-full">Rate</button>
+                                </div>
+                            </EditForm>
+                        </div>
+                    }
+
+                    <div class="divider text-2xl">Reviews</div>
+                    @if (!game.Ratings.Any())
+                    {
+                        <span class="text-center text-xl">No reviews yet</span>
+                    }
+
+                    <div class="grid grid-cols-1 md:grid-cols-fill-[350px] gap-5">
+                        @foreach (var ratingModel in _ratings)
+                        {
+                            var rating = ratingModel.Rating;
+                            <div class="flex flex-col transition-all duration-300">
+                                <div class="flex flex-row">
+                                    <img src="uploads/avatars/@rating.Rater!.Id.ToString("n")" class="me-2 w-30 h-30 mask mask-squircle"/>
+                                    <div class="flex flex-col gap-2">
+                                        <h5 class="text-xl underline">@rating.Rater!.UserName</h5>
+                                        <RatingStars Rating="@rating.Score" class="rating-sm"/>
+                                        <p>@rating.Score/10 @((RatingValue)rating.Score).
+                                            <span class="spoiler-text @(ratingModel.IsSpoiler ? "spoiler-on" : "")" @onclick="() => ratingModel.IsSpoiler = false">
+                                                @rating.Comment
+                                            </span>
+                                        </p>
+                                    </div>
+                                </div>
+
+                            </div>
+                        }
+                    </div>
+                }
+                @if (game.ActiveAtUtc > DateTime.UtcNow)
+                {
+                    <div class="flex flex-col items-center content-center">
+                        <h3 class="divider text-3xl ">Starting in:</h3>
+                        <Countdown EndDate="@game.ActiveAtUtc.Value" class="md:w-max"/>
+                    </div>
+                }
+                @if (!game.ActiveAtUtc.HasValue)
+                {
+                    <div class="flex flex-col items-center content-center">
+                        <h3 class="divider text-3xl ">Game is not queued!</h3>
+                    </div>
+                }
             </div>
         </div>
     }
