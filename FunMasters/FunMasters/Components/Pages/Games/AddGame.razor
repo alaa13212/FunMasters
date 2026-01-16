@@ -93,7 +93,6 @@
     private Guid currentUserId;
     private string? errorMessage;
     private string? coverArtUrl;
-    private string steamLink;
     private bool _isLoadingCovers;
     
     private CancellationTokenSource? _cts;
@@ -136,7 +135,6 @@
         // Insert
         model.SuggestedById = currentUserId;
         model.CreatedAtUtc = DateTime.UtcNow;
-        model.SteamLink = steamLink;
             
         Db.Suggestions.Add(model);
         await Db.SaveChangesAsync(CancellationToken);
@@ -169,8 +167,8 @@
     private void PickGame(IgdbGame game)
     {
         _suggestedCoverArts.Clear();
-        coverArtUrl = game.cover.url;
-        model!.SteamLink = game.websites.FirstOrDefault(w => w.url.Contains("steam"))?.url ?? "";
+        coverArtUrl = game.cover!.url;
+        model.SteamLink = game.websites?.FirstOrDefault(w => w.url?.Contains("steam") == true)?.url ?? null;
         model.Title = game.name;
     }
 

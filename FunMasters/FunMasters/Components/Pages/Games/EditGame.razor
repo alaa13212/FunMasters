@@ -169,8 +169,8 @@ else if (model == null)
     private void PickGame(IgdbGame game)
     {
         _suggestedCoverArts.Clear();
-        coverArtUrl = game.cover.url;
-        model!.SteamLink = game.websites.FirstOrDefault(w => w.url.Contains("steam"))?.url ?? "";
+        coverArtUrl = game.cover!.url;
+        model!.SteamLink = game.websites?.FirstOrDefault(w => w.url?.Contains("steam") == true)?.url ?? null;
         model.Title = game.name;
     }
     
