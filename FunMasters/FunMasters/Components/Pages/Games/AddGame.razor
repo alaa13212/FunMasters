@@ -57,7 +57,7 @@
                     @foreach (IgdbGame coverArt in _suggestedCoverArts)
                     { 
                         <div class="card-hover rounded-box bg-base-300 p-3 gap-5 relative flex flex-col items-center justify-between" @onclick="@(() => PickGame(coverArt))">
-                            <img src="@coverArt.cover.url"/>
+                            <img src="@coverArt.cover!.url"/>
                             <button type="button" class="btn btn-info w-full stretched-link">Pick This</button>
                         </div>
                     }
@@ -153,24 +153,24 @@
 
     private async Task TryGetCoverArt()
     {
+        if(string.IsNullOrWhiteSpace(model?.Title))
+            return;
+        
         StartOperation();
         _isLoadingCovers = true;
         _suggestedCoverArts.Clear();
         
         List<IgdbGame> igdbGames = await IgdbService.SearchGamesAsync(model.Title, CancellationToken);
-        var igdbGamesWithCovers = igdbGames.Where(g => g.cover != null).ToList();
-        foreach (IgdbGame game in igdbGamesWithCovers)
-             game.cover.url = game.cover.url.Replace("t_thumb", "t_1080p");
-
+        _suggestedCoverArts.AddRange(igdbGames);
+        
         _isLoadingCovers = false;
-        _suggestedCoverArts.AddRange(igdbGamesWithCovers);
     }
 
     private void PickGame(IgdbGame game)
     {
         _suggestedCoverArts.Clear();
         coverArtUrl = game.cover.url;
-        steamLink = game.websites.FirstOrDefault(w => w.url.Contains("steam"))?.url ?? "";
+        model!.SteamLink = game.websites.FirstOrDefault(w => w.url.Contains("steam"))?.url ?? "";
         model.Title = game.name;
     }
 
