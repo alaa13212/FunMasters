@@ -1,5 +1,6 @@
 ﻿namespace FunMasters.Services;
 
+using System.Text.Json;
 using System.Net.Http.Json;
 
 public class IgdbService
@@ -45,7 +46,7 @@ public class IgdbService
         request.Headers.Add("Client-ID", clientId);
         request.Headers.Add("Authorization", $"Bearer {token}");
         request.Content = new StringContent(
-            $"search \"{query}\"; fields id,name,cover; limit 8;",
+            $"search \"{query}\"; fields id,name,cover, cover.url,websites,websites.url; limit 8;",
             System.Text.Encoding.UTF8,
             "text/plain"
         );
@@ -53,36 +54,12 @@ public class IgdbService
         var response = await _http.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync(cancellationToken);
-        return System.Text.Json.JsonSerializer.Deserialize<List<IgdbGame>>(json) ?? [];
-    }
-    
-    public async Task<List<string>> GetCoverUrlAsync(List<int> coverIds, CancellationToken cancellationToken)
-    {
-        var token = await GetAccessTokenAsync(cancellationToken);
-        var clientId = _config["IGDB:ClientId"];
-
-        var request = new HttpRequestMessage(HttpMethod.Post, "https://api.igdb.com/v4/covers");
-        request.Headers.Add("Client-ID", clientId);
-        request.Headers.Add("Authorization", $"Bearer {token}");
-        request.Content = new StringContent(
-            $"fields url,image_id; where game = ({string.Join(',', coverIds)});",
-            System.Text.Encoding.UTF8,
-            "text/plain"
-        );
-
-        var response = await _http.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync(cancellationToken);
-        var covers = System.Text.Json.JsonSerializer.Deserialize<List<IgdbCover>>(json);
+        List<IgdbGame> igdbGames = JsonSerializer.Deserialize<List<IgdbGame>>(json) ?? [];
+        List<IgdbGame> igdbGamesWithCovers = igdbGames.Where(g => g.cover != null).ToList();
+        foreach (IgdbGame game in igdbGamesWithCovers)
+            game.cover!.url = game.cover.url?.Replace("t_thumb", "t_1080p");
         
-        return covers?
-                   .Where(c => c.image_id != null)
-                   .Select(c => $"https://images.igdb.com/igdb/image/upload/t_1080p/{c.image_id}.jpg")
-                   .ToList()
-               ?? [];
+        return igdbGamesWithCovers;
     }
-
-    public record IgdbCover(int id, string? image_id, string url);
-
 
 }

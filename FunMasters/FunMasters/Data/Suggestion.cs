@@ -18,6 +18,9 @@ public class Suggestion
     public ApplicationUser? SuggestedBy { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
+    [StringLength(255)]
+    public string? SteamLink { get; set; }
+
     // Active window
     public DateTime? ActiveAtUtc { get; set; }
     public DateTime? FinishedAtUtc { get; set; }
