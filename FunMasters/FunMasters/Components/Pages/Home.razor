@@ -44,15 +44,16 @@
         {
             <p><em>No active games right now.</em></p>
         }
-    
-    
+
+
         @if (_user != null)
         {
             <div class="max-w-[700px] m-auto">
-                <Rater User="_user" />
+                <Rater User="_user"/>
             </div>
         }
-    
+
+
         @if (queued.Any())
         {
             <div class="divider md:text-2xl md:m-8">Upcoming Queue</div>
@@ -82,29 +83,39 @@
         {
             <p><em>No games in the queue yet.</em></p>
         }
-        
+
         @if (finished.Any())
         {
             <div class="divider md:text-2xl md:m-8">Finished Games</div>
+            <div class="mb-4 flex justify-end">
+                <select class="select select-bordered w-auto" @onchange="OnSortChanged">
+                    <option value="@SortingCriteria.FinishDateDescending">Sort by Finish Date (Newest)</option>
+                    <option value="@SortingCriteria.FinishDateAscending">Sort by Finish Date (Oldest)</option>
+                    <option value="@SortingCriteria.RatingDescending">Sort by Rating (Highest)</option>
+                    <option value="@SortingCriteria.RatingAscending">Sort by Rating (Lowest)</option>
+                    <option value="@SortingCriteria.Suggester">Sort by Suggester (A-Z)</option>
+                </select>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-fill-[400px] gap-3 md:gap-5">
-                @foreach (var game in finished)
+                @foreach (var game in GetSortedGames())
                 {
                     <div class="card card-side bg-base-200 grid grid-cols-2 shadow-xs card-hover">
                         <figure>
-                            <img src="@GameCoverStorage.GetPublicUrl(game.Id)" alt="@game.Title" />
+                            <img src="@GameCoverStorage.GetPublicUrl(game.Id)" alt="@game.Title"/>
                         </figure>
                         <div class="card-body">
                             <h3 class="text-xl mb-0 text-primary">@game.Title</h3>
-                            
+
                             <p>
                                 Suggested By
                                 <br/>
                                 <strong class="flex flex-row items-center gap-2">
-                                    <img src="uploads/avatars/@game.SuggestedBy!.Id.ToString("n")" class="md:ms-1 me-1 my-2 w-6 h-6 mask mask-squircle"/> 
+                                    <img src="uploads/avatars/@game.SuggestedBy!.Id.ToString("n")" class="md:ms-1 me-1 my-2 w-6 h-6 mask mask-squircle"/>
                                     <span class="text-nowrap text-ellipsis overflow-hidden">@game.SuggestedBy.UserName</span>
                                 </strong>
-                                
-                                @if(game.AverageRating.HasValue)
+
+                                @if (game.AverageRating.HasValue)
                                 {
                                     <div class="flex flex-col items-center gap-2">
                                         <RatingStars Rating="@((int)Math.Round(game.AverageRating ?? 0))" class="pe-2 rating-lg"/>
@@ -119,6 +130,7 @@
                 }
                 @* More Button *@
             </div>
+
         }
         else
         {
@@ -132,6 +144,7 @@
     private Suggestion? active;
     private List<Suggestion> queued = [];
     private List<Suggestion> finished = [];
+    private SortingCriteria sortBy = SortingCriteria.FinishDateDescending;
 
     private ApplicationUser? _user;
 
@@ -139,7 +152,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-
         List<Suggestion> all = await Db.Suggestions
             .Include(s => s.SuggestedBy)
             .Include(s => s.Ratings)
@@ -162,5 +174,32 @@
         {
             _user = user;
         }
+    }
+    
+    private void OnSortChanged(ChangeEventArgs e)
+    {
+        sortBy = Enum.TryParse(e.Value?.ToString(), out SortingCriteria result) ? result : SortingCriteria.FinishDateDescending;
+    }
+    
+    private IEnumerable<Suggestion> GetSortedGames()
+    {
+        return sortBy switch
+        {
+            SortingCriteria.FinishDateDescending => finished.OrderByDescending(g => g.FinishedAtUtc),
+            SortingCriteria.FinishDateAscending => finished.OrderBy(g => g.FinishedAtUtc),
+            SortingCriteria.RatingDescending => finished.OrderByDescending(g => g.AverageRating ?? 0),
+            SortingCriteria.RatingAscending => finished.OrderBy(g => g.AverageRating ?? 0),
+            SortingCriteria.Suggester => finished.OrderBy(g => g.SuggestedBy?.UserName ?? ""),
+            _ => finished.OrderByDescending(g => g.FinishedAtUtc)
+        };
+    }
+
+    private enum SortingCriteria
+    {
+        FinishDateDescending,
+        FinishDateAscending,
+        RatingDescending,
+        RatingAscending,
+        Suggester,
     }
 }
