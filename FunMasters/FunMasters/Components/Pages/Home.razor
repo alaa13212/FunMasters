@@ -89,11 +89,11 @@
             <div class="divider md:text-2xl md:m-8">Finished Games</div>
             <div class="mb-4 flex justify-end">
                 <select class="select select-bordered w-auto" @onchange="OnSortChanged">
-                    <option value="finishDate">Sort by Finish Date (Newest)</option>
-                    <option value="finishDateOld">Sort by Finish Date (Oldest)</option>
-                    <option value="ratingHigh">Sort by Rating (Highest)</option>
-                    <option value="ratingLow">Sort by Rating (Lowest)</option>
-                    <option value="suggester">Sort by Suggester (A-Z)</option>
+                    <option value="@SortingCriteria.FinishDateDescending">Sort by Finish Date (Newest)</option>
+                    <option value="@SortingCriteria.FinishDateAscending">Sort by Finish Date (Oldest)</option>
+                    <option value="@SortingCriteria.RatingDescending">Sort by Rating (Highest)</option>
+                    <option value="@SortingCriteria.RatingAscending">Sort by Rating (Lowest)</option>
+                    <option value="@SortingCriteria.Suggester">Sort by Suggester (A-Z)</option>
                 </select>
             </div>
 
@@ -144,6 +144,7 @@
     private Suggestion? active;
     private List<Suggestion> queued = [];
     private List<Suggestion> finished = [];
+    private SortingCriteria sortBy = SortingCriteria.FinishDateDescending;
 
     private ApplicationUser? _user;
 
@@ -175,23 +176,30 @@
         }
     }
     
-    private string sortBy = "finishDate";
-    
     private void OnSortChanged(ChangeEventArgs e)
     {
-        sortBy = e.Value?.ToString() ?? "finishDate";
+        sortBy = Enum.TryParse(e.Value?.ToString(), out SortingCriteria result) ? result : SortingCriteria.FinishDateDescending;
     }
     
     private IEnumerable<Suggestion> GetSortedGames()
     {
         return sortBy switch
         {
-            "finishDate" => finished.OrderByDescending(g => g.FinishedAtUtc),
-            "finishDateOld" => finished.OrderBy(g => g.FinishedAtUtc),
-            "ratingHigh" => finished.OrderByDescending(g => g.AverageRating ?? 0),
-            "ratingLow" => finished.OrderBy(g => g.AverageRating ?? 0),
-            "suggester" => finished.OrderBy(g => g.SuggestedBy?.UserName ?? ""),
+            SortingCriteria.FinishDateDescending => finished.OrderByDescending(g => g.FinishedAtUtc),
+            SortingCriteria.FinishDateAscending => finished.OrderBy(g => g.FinishedAtUtc),
+            SortingCriteria.RatingDescending => finished.OrderByDescending(g => g.AverageRating ?? 0),
+            SortingCriteria.RatingAscending => finished.OrderBy(g => g.AverageRating ?? 0),
+            SortingCriteria.Suggester => finished.OrderBy(g => g.SuggestedBy?.UserName ?? ""),
             _ => finished.OrderByDescending(g => g.FinishedAtUtc)
         };
+    }
+
+    private enum SortingCriteria
+    {
+        FinishDateDescending,
+        FinishDateAscending,
+        RatingDescending,
+        RatingAscending,
+        Suggester,
     }
 }
