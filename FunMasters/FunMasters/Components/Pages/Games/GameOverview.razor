@@ -112,7 +112,7 @@
                             <div class="card bg-primary/10 border-2 border-primary shadow-lg flex-1">
                                 <div class="card-body items-center text-center">
                                     <h3 class="card-title text-primary">Main Story</h3>
-                                    <div class="text-5xl font-bold text-primary my-2">@hltbData.MainStory</div>
+                                    <div class="text-5xl font-bold text-primary my-2">@FormatHours(hltbData.MainStory)</div>
                                     <p class="text-lg">hours</p>
                                 </div>
                             </div>
@@ -122,7 +122,7 @@
                             <div class="card bg-secondary/10 border-2 border-secondary shadow-lg flex-1">
                                 <div class="card-body items-center text-center">
                                     <h3 class="card-title text-secondary">Main + Extras</h3>
-                                    <div class="text-5xl font-bold text-secondary my-2">@hltbData.MainPlusExtras</div>
+                                    <div class="text-5xl font-bold text-secondary my-2">@FormatHours(hltbData.MainPlusExtras)</div>
                                     <p class="text-lg">hours</p>
                                 </div>
                             </div>
@@ -132,7 +132,7 @@
                             <div class="card bg-accent/10 border-2 border-accent shadow-lg flex-1">
                                 <div class="card-body items-center text-center">
                                     <h3 class="card-title text-accent">Completionist</h3>
-                                    <div class="text-5xl font-bold text-accent my-2">@hltbData.Completionist</div>
+                                    <div class="text-5xl font-bold text-accent my-2">@FormatHours(hltbData.Completionist)</div>
                                     <p class="text-lg">hours</p>
                                 </div>
                             </div>
@@ -320,6 +320,20 @@
     private string HltbLink()
     {
         return hltbData != null? hltbData.GameUrl : $"https://howlongtobeat.com/?q={game.Title}";
+    }
+    
+    private static string FormatHours(double hours)
+    {
+        // Round to nearest 0.5
+        double rounded = Math.Round(hours * 2, MidpointRounding.AwayFromZero) / 2;
+
+        int whole = (int)Math.Floor(rounded);
+        bool hasHalf = Math.Abs(rounded - whole - 0.5) < double.Epsilon;
+
+        if (hasHalf)
+            return $"{whole}½";
+
+        return whole.ToString();
     }
 
     private class GameRatingViewModel(Rating rating, bool isSpoiler)
