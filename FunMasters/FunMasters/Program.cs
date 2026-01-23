@@ -43,6 +43,7 @@ builder.Services.AddAuthorization(options =>
 });
 
 builder.Services.AddHttpClient<IgdbService>();
+builder.Services.AddHttpClient<HltbService>();
 builder.Services.AddScoped<GameCoverStorage>();
 builder.Services.AddScoped<QueueManager>();
 
