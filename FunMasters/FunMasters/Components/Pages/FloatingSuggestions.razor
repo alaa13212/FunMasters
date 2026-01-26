@@ -45,13 +45,47 @@
     
     protected override async Task OnInitializedAsync()
     {
-        _suggestions = await Db.Suggestions
+        int cycleStart = await Db.Suggestions
+            .Where(s => s.Status == SuggestionStatus.Queued)
+            .OrderByDescending(s => s.ActiveAtUtc)
+            .Select(s => s.SuggestedBy!.CycleOrder)
+            .FirstOrDefaultAsync();
+        
+        var suggestions = await Db.Suggestions
             .Include(s => s.SuggestedBy)
-            .Include(s => s.Ratings)
             .Where(s => s.Status == SuggestionStatus.Pending && !s.IsHidden)
-            .OrderBy(s => s.Order)
-            .ThenBy(s => s.SuggestedBy!.CycleOrder)
             .ToListAsync();
+
+        int maxCycleOrder = suggestions
+            .Select(s => s.SuggestedBy)
+            .Distinct()
+            .Max(u => u!.CycleOrder);
+        
+        var suggestionsByUser = suggestions
+            .GroupBy(s => s.SuggestedById)
+            .Select(g => new
+            {
+                UserId = g.Key,
+                User = g.First().SuggestedBy,
+                Suggestions = g.ToList()
+            })
+            .OrderBy(x => x.User!.CycleOrder > cycleStart ? x.User!.CycleOrder - cycleStart : maxCycleOrder + x.User!.CycleOrder - cycleStart)
+            .ToList();
+        
+        do
+        {
+            foreach (var userSuggestion in suggestionsByUser)
+            {
+                Suggestion? suggestion = userSuggestion.Suggestions.MinBy(s => s.Order);
+                if (suggestion != null)
+                {
+                    _suggestions.Add(suggestion);
+                    userSuggestion.Suggestions.Remove(suggestion);
+                }
+            }
+            
+            suggestionsByUser.RemoveAll(group => group.Suggestions.Count == 0);
+        } while (suggestionsByUser.Any());
 
         loading = false;
     }

@@ -29,7 +29,7 @@ public class HltbService
         _httpClient.DefaultRequestHeaders.Add("Referer", "https://howlongtobeat.com/");
     }
 
-    public async Task<HltbGameResult> SearchGameAsync(string gameName, string authToken = null)
+    public async Task<HltbGameResult> SearchGameAsync(string gameName, string? authToken = null)
     {
         if (string.IsNullOrWhiteSpace(gameName))
             throw new ArgumentException("Game name cannot be empty", nameof(gameName));
