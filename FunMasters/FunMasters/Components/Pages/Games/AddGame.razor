@@ -85,10 +85,7 @@
 
 @code {
     [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
-    private Suggestion model = new()
-    {
-       IsHidden = true
-    };
+    private Suggestion model = new();
     
     private Guid currentUserId;
     private string? errorMessage;

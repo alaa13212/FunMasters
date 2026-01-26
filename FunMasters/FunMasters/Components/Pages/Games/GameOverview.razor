@@ -18,7 +18,7 @@
     else
     {
         <PageTitle>@game.Title</PageTitle>
-        <div class="card md:card-side bg-base-200 shadow-md m-auto w-full">
+        <div class="card md:card-side bg-base-200 shadow-md m-auto w-full @("@container")">
             <figure class="max-md:max-h-[40vh] min-w-[300px] lg:min-w-[450px] md:max-w-1/3 lg:max-w-2/5 xl:max-w-1/2">
                 <img src="@GameCoverStorage.GetPublicUrl(game.Id)" alt="@game.Title" class="max-md:w-full"/>
             </figure>
@@ -66,89 +66,6 @@
                     </div>
 
                 </div>
-                <style>
-                @@keyframes glare {
-                    0% {
-                        background-position: -200% center;
-                    }
-                    100% {
-                        background-position: 200% center;
-                    }
-                }
-                .glare {
-                    background: linear-gradient(90deg, 
-                        transparent 0%, 
-                        transparent 40%, 
-                        rgba(255, 255, 255, 0.3) 50%, 
-                        transparent 60%, 
-                        transparent 100%);
-                    background-size: 200% 100%;
-                    animation: glare 2s ease-in-out infinite;
-                            }
-                </style>
-
-                @if (hltbLoading)
-                {
-                    <div class="divider text-2xl">How Long to Beat</div>
-                    <div class="flex flex-col md:flex-row gap-4 w-full">
-                        @for (int i = 0; i < 3; i++)
-                        {
-                            <div class="card bg-base-300 shadow-lg flex-1 glare">
-                                <div class="card-body items-center text-center">
-                                    <div class="skeleton h-6 w-32 mb-2"></div>
-                                    <div class="skeleton h-12 w-20 my-2"></div>
-                                    <div class="skeleton h-4 w-16"></div>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                }
-                else if (hltbData != null)
-                {
-                    <div class="divider text-2xl">How Long to Beat</div>
-                    <div class="flex flex-col md:flex-row gap-4 w-full">
-                        @if (hltbData.MainStory > 0)
-                        {
-                            <div class="card bg-primary/10 border-2 border-primary shadow-lg flex-1">
-                                <div class="card-body items-center text-center">
-                                    <h3 class="card-title text-primary">Main Story</h3>
-                                    <div class="text-5xl font-bold text-primary my-2">@FormatHours(hltbData.MainStory)</div>
-                                    <p class="text-lg">hours</p>
-                                </div>
-                            </div>
-                        }
-                        @if (hltbData.MainPlusExtras > 0)
-                        {
-                            <div class="card bg-secondary/10 border-2 border-secondary shadow-lg flex-1">
-                                <div class="card-body items-center text-center">
-                                    <h3 class="card-title text-secondary">Main + Extras</h3>
-                                    <div class="text-5xl font-bold text-secondary my-2">@FormatHours(hltbData.MainPlusExtras)</div>
-                                    <p class="text-lg">hours</p>
-                                </div>
-                            </div>
-                        }
-                        @if (hltbData.Completionist > 0)
-                        {
-                            <div class="card bg-accent/10 border-2 border-accent shadow-lg flex-1">
-                                <div class="card-body items-center text-center">
-                                    <h3 class="card-title text-accent">Completionist</h3>
-                                    <div class="text-5xl font-bold text-accent my-2">@FormatHours(hltbData.Completionist)</div>
-                                    <p class="text-lg">hours</p>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                }
-                else if (!hltbLoading)
-                {
-                    <div class="divider text-2xl">How Long to Beat</div>
-                    <div class="alert alert-info shadow-lg">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        <span>No HowLongToBeat data available for this game.</span>
-                    </div>
-                }
                 @if (game.ActiveAtUtc <= DateTime.UtcNow)
                 {
                     @if (game.FinishedAtUtc > DateTime.UtcNow)
@@ -158,7 +75,7 @@
                             <Countdown EndDate="@game.FinishedAtUtc.Value" class="md:w-max"/>
                         </div>
                     }
-
+                    <HowLongTOBeat HltbData="hltbData" HltbLoading="hltbLoading" />
                     @if (ratingRecord != null)
                     {
                         <div class="divider text-2xl">Finished Playing? - Rate this game</div>
@@ -225,12 +142,16 @@
                         <h3 class="divider text-3xl ">Starting in:</h3>
                         <Countdown EndDate="@game.ActiveAtUtc.Value" class="md:w-max"/>
                     </div>
+                    
+                    <HowLongTOBeat HltbData="hltbData" HltbLoading="hltbLoading" />
                 }
                 @if (!game.ActiveAtUtc.HasValue)
                 {
                     <div class="flex flex-col items-center content-center">
                         <h3 class="divider text-3xl ">Game is not queued!</h3>
                     </div>
+                    
+                    <HowLongTOBeat HltbData="hltbData" HltbLoading="hltbLoading" />
                 }
             </div>
         </div>
