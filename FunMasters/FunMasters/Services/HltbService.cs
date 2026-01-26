@@ -38,7 +38,7 @@ public class HltbService
         var searchPayload = new
         {
             searchType = "games",
-            searchTerms = gameName.Split(' '),
+            searchTerms = gameName.Split(' ').Where(IsWord).ToArray(),
             searchPage = 1,
             size = 20,
             searchOptions = new
@@ -146,6 +146,14 @@ public class HltbService
     private double ConvertSecondsToHours(int seconds)
     {
         return seconds > 0 ? Math.Round(seconds / 3600.0, 1) : 0;
+    }
+    
+    public static bool IsWord(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return false;
+
+        return text.Any(char.IsLetter);
     }
 }
 
