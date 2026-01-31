@@ -14,7 +14,7 @@ public class Rating
     
     public int Score { get; set; } // 1..10
     
-    [StringLength(1000)]
+    [StringLength(50000)]
     public string? Comment { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }

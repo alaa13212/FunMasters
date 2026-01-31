@@ -124,7 +124,7 @@
                                     <div class="flex flex-col gap-2">
                                         <h5 class="text-xl underline">@rating.Rater!.UserName</h5>
                                         <RatingStars Rating="@rating.Score" class="rating-sm"/>
-                                        <p>@rating.Score/10 @((RatingValue)rating.Score).
+                                        <p class="whitespace-pre-line">@rating.Score/10 @((RatingValue)rating.Score).
                                             <span class="spoiler-text @(ratingModel.IsSpoiler ? "spoiler-on" : "")" @onclick="() => ratingModel.IsSpoiler = false">
                                                 @rating.Comment
                                             </span>
