@@ -29,11 +29,10 @@ public class QueueManager(ApplicationDbContext db)
                 next.Status = SuggestionStatus.Active;
             }
         }
+        await db.SaveChangesAsync();
 
         // Fill queue if needed
         await RebuildQueueAsync();
-
-        await db.SaveChangesAsync();
     }
     
     public async Task<Suggestion?> GetNextSuggestionAsync()
@@ -68,7 +67,7 @@ public class QueueManager(ApplicationDbContext db)
             .ThenBy(u => u.CycleOrder)
             .ToList();
         
-        // For each user that doesn’t have one queued, pick their earliest pending
+        // For each user that doesn't have one queued, pick their earliest pending
         foreach (var user in orderedUsers)
         {
             var pending = await db.Suggestions
