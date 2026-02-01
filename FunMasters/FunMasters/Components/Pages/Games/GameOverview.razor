@@ -242,20 +242,6 @@
     {
         return hltbData != null? hltbData.GameUrl : $"https://howlongtobeat.com/?q={game.Title}";
     }
-    
-    private static string FormatHours(double hours)
-    {
-        // Round to nearest 0.5
-        double rounded = Math.Round(hours * 2, MidpointRounding.AwayFromZero) / 2;
-
-        int whole = (int)Math.Floor(rounded);
-        bool hasHalf = Math.Abs(rounded - whole - 0.5) < double.Epsilon;
-
-        if (hasHalf)
-            return $"{whole}½";
-
-        return whole.ToString();
-    }
 
     private class GameRatingViewModel(Rating rating, bool isSpoiler)
     {

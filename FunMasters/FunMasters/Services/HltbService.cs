@@ -153,7 +153,7 @@ public class HltbService
         if (string.IsNullOrWhiteSpace(text))
             return false;
 
-        return text.Any(char.IsLetter);
+        return text.Any(char.IsLetterOrDigit);
     }
 }
 
