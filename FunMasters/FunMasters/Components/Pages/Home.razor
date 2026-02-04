@@ -2,6 +2,7 @@
 @using FunMasters.Components.Pages.Rating
 @inject ApplicationDbContext Db
 @inject GameCoverStorage GameCoverStorage
+@inject AvatarStorage AvatarStorage
 @inject UserManager<ApplicationUser> UserManager
 
 <PageTitle>Fun Masters</PageTitle>
@@ -22,7 +23,7 @@
                     <div>
                         <h2 class="card-title text-primary text-3xl md:text-5xl mb-5">@active.Title</h2>
                         <p class="mb-1">
-                            Suggested By<br/><strong><img src="uploads/avatars/@active.SuggestedBy!.Id.ToString("n")" class="ms-3 me-1 my-2 w-6 h-6 mask mask-squircle"/> @active.SuggestedBy.UserName</strong>
+                            Suggested By<br/><strong><img src="@AvatarStorage.GetPublicUrl(active.SuggestedBy!.Id)" class="ms-3 me-1 my-2 w-6 h-6 mask mask-squircle"/> @active.SuggestedBy.UserName</strong>
                         </p>
                         <p>
                             Start: @active.ActiveAtUtc!.Value.ToLocalTime().ToString("dd/MM/yyyy")<br/>
@@ -69,7 +70,7 @@
                             <span class="absolute text-[200px] -bottom-20 -end-5 opacity-10 select-none">@(i++)</span>
                             <h3 class="text-xl mb-0 text-primary">@game.Title</h3>
                             <p>
-                                Suggested By<br/><strong><img src="uploads/avatars/@game.SuggestedBy!.Id.ToString("n")" class="md:ms-1 me-1 my-2 w-6 h-6 mask mask-squircle"/> @game.SuggestedBy.UserName</strong>
+                                Suggested By<br/><strong><img src="@AvatarStorage.GetPublicUrl(game.SuggestedBy!.Id)" class="md:ms-1 me-1 my-2 w-6 h-6 mask mask-squircle"/> @game.SuggestedBy.UserName</strong>
                             </p>
                             <span>Expected Start:<br/>@game.ActiveAtUtc!.Value.ToLocalTime().ToString("yyyy-MM-dd")</span>
                             <span>Expected End:<br/>@game.FinishedAtUtc!.Value.ToLocalTime().ToString("yyyy-MM-dd")</span>
@@ -111,7 +112,7 @@
                                 Suggested By
                                 <br/>
                                 <strong class="flex flex-row items-center gap-2">
-                                    <img src="uploads/avatars/@game.SuggestedBy!.Id.ToString("n")" class="md:ms-1 me-1 my-2 w-6 h-6 mask mask-squircle"/>
+                                    <img src="@AvatarStorage.GetPublicUrl(game.SuggestedBy!.Id)" class="md:ms-1 me-1 my-2 w-6 h-6 mask mask-squircle"/>
                                     <span class="text-nowrap text-ellipsis overflow-hidden">@game.SuggestedBy.UserName</span>
                                 </strong>
 

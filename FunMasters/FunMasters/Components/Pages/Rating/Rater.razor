@@ -1,6 +1,7 @@
 ﻿@using FunMasters.Models
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject GameCoverStorage GameCoverStorage
+@inject AvatarStorage AvatarStorage
 
 @if (_needsRating.Count > 0)
 {
@@ -17,7 +18,7 @@
                         </figure>
                         <div class="card-body">
                             <h3 class="text-xl mb-0 text-primary">@game.Title</h3>
-                                Suggested By<br/><strong><img src="uploads/avatars/@game.SuggestedBy!.Id.ToString("n")" class="md:ms-1 me-1 my-2 w-6 h-6 mask mask-squircle"/> @game.SuggestedBy.UserName</strong>
+                                Suggested By<br/><strong><img src="@AvatarStorage.GetPublicUrl(game.SuggestedBy!.Id)" class="md:ms-1 me-1 my-2 w-6 h-6 mask mask-squircle"/> @game.SuggestedBy.UserName</strong>
                                 <span class="divider">My Rating</span>
                                 <EditForm Model="ratingRecord" method="post" OnValidSubmit="RateGame" FormName="@("rate-" + game.Id.ToString("n"))">
                                     <DataAnnotationsValidator/>

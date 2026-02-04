@@ -52,6 +52,7 @@
     private string? login;
     private string? username;
 
+    [Inject] private AvatarStorage AvatarStorage { get; set; } = default!;
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
 
     [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
@@ -64,7 +65,7 @@
 
         Input.Login ??= login;
         Input.DisplayName ??= username;
-        Input.ProfileImageUrl = $"/uploads/avatars/{user.Id:n}";
+        Input.ProfileImageUrl = AvatarStorage.GetPublicUrl(user.Id);
     }
 
     private async Task OnValidSubmitAsync()

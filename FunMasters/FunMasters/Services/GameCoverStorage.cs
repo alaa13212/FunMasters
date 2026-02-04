@@ -1,41 +1,43 @@
-﻿namespace FunMasters.Services;
+﻿using FunMasters.Extensions;
+
+namespace FunMasters.Services;
 
 using System.Net.Http;
 
-public class GameCoverStorage
+public class GameCoverStorage(IWebHostEnvironment env, HttpClient http)
 {
-    private readonly IWebHostEnvironment _env;
-    private readonly HttpClient _http;
+    private static readonly Dictionary<Guid, DateTime> Cache = new();
 
-    public GameCoverStorage(IWebHostEnvironment env, HttpClient http)
-    {
-        _env = env;
-        _http = http;
-    }
-
-    private string GetFilePath(string fileName)
-        => Path.Combine(_env.WebRootPath, "uploads", "gamecovers", fileName);
+    private string GetFilePath(Guid gameId)
+        => Path.Combine(env.WebRootPath, "uploads", "gamecovers", gameId.ToString("n"));
 
     public string GetPublicUrl(Guid gameId)
-        => $"/uploads/gamecovers/{gameId:n}";
+        => $"/uploads/gamecovers/{gameId:n}?{GetFileTimestamp(gameId)}";
+
+    private string GetFileTimestamp(Guid gameId)
+    {
+        return Cache.GetOrSet(gameId, key => File.GetLastWriteTimeUtc(GetFilePath(key))).Ticks.ToString();
+    }
 
     public async Task<string> SaveCoverAsync(string sourceUrl, Guid gameId)
     {
         // ensure directory exists
-        var dir = Path.Combine(_env.WebRootPath, "uploads", "gamecovers");
+        var dir = Path.Combine(env.WebRootPath, "uploads", "gamecovers");
         Directory.CreateDirectory(dir);
         
         var fileName = $"{gameId:n}";
-        var filePath = GetFilePath(fileName);
+        var filePath = GetFilePath(gameId);
 
         if (!sourceUrl.Contains("https:"))
             sourceUrl = "https:" + sourceUrl;
-        using var response = await _http.GetAsync(sourceUrl);
+        using var response = await http.GetAsync(sourceUrl);
         response.EnsureSuccessStatusCode();
 
         await using var stream = await response.Content.ReadAsStreamAsync();
         await using var fileStream = File.Create(filePath);
         await stream.CopyToAsync(fileStream);
+
+        Cache[gameId] = DateTime.UtcNow;
 
         return GetPublicUrl(gameId);
     }

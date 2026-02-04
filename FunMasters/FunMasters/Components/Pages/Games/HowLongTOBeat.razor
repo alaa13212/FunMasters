@@ -94,7 +94,7 @@ else if (!HltbLoading)
         bool hasHalf = Math.Abs(rounded - whole - 0.5) < double.Epsilon;
 
         if (hasHalf)
-            return $"{whole}½";
+            return whole > 0 ? $"{whole}½" : "1/2";
 
         return whole.ToString();
     }
