@@ -1,5 +1,5 @@
 ﻿@using System.Security.Claims
-
+@inject AvatarStorage AvatarStorage
 
 <div class="navbar bg-base-300 w-full">
     <div class="flex-none lg:hidden">
@@ -31,7 +31,7 @@
                     <li>
                         <NavLink href="Account/Manage" ActiveClass="menu-active"  class="btn btn-ghost p-0">
                             <img class="w-8 mask mask-squircle" alt="@authContext.User.Identity?.Name"
-                                 src="uploads/avatars/@authContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value.ToLower().Replace("-", "")"/>
+                                 src="@AvatarStorage.GetPublicUrl(Guid.Parse(authContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value))"/>
                             <span class="ms-1 max-md:hidden">@authContext.User.Identity?.Name</span>
                         </NavLink>
                     </li>

@@ -5,6 +5,7 @@
 @inject ApplicationDbContext Db
 @inject NavigationManager NavigationManager
 @inject GameCoverStorage GameCoverStorage
+@inject AvatarStorage AvatarStorage
 @inject HltbService HltbService
 
 
@@ -40,7 +41,7 @@
                     <div class="h-max">
                         Suggested By
                         <br/>
-                        <strong class="text-lg"><img src="uploads/avatars/@game.SuggestedBy!.Id.ToString("n")" class="md:ms-1 me-1 my-2 w-10 h-10 mask mask-squircle"/> @game.SuggestedBy.UserName</strong>
+                        <strong class="text-lg"><img src="@AvatarStorage.GetPublicUrl(game.SuggestedBy!.Id)" class="md:ms-1 me-1 my-2 w-10 h-10 mask mask-squircle"/> @game.SuggestedBy.UserName</strong>
                     </div>
                     <div class="flex flex-wrap gap-2 justify-end">
                         <div>
@@ -120,7 +121,7 @@
                             var rating = ratingModel.Rating;
                             <div class="flex flex-col transition-all duration-300">
                                 <div class="flex flex-row">
-                                    <img src="uploads/avatars/@rating.Rater!.Id.ToString("n")" class="me-2 w-30 h-30 mask mask-squircle"/>
+                                    <img src="@AvatarStorage.GetPublicUrl(rating.Rater!.Id)" class="me-2 w-30 h-30 mask mask-squircle"/>
                                     <div class="flex flex-col gap-2">
                                         <h5 class="text-xl underline">@rating.Rater!.UserName</h5>
                                         <RatingStars Rating="@rating.Score" class="rating-sm"/>
