@@ -17,7 +17,7 @@ public class AvatarStorage(IWebHostEnvironment env, HttpClient http)
         return Cache.GetOrSet(userId, key => File.GetLastWriteTimeUtc(GetFilePath(key))).Ticks.ToString();
     }
 
-    public async Task<string> SaveAvatarsAsync(Stream stream, Guid userId)
+    public async Task<string> SaveAvatarAsync(Stream stream, Guid userId)
     {
         // ensure directory exists
         var dir = Path.Combine(env.WebRootPath, "uploads", "avatars");
@@ -26,9 +26,9 @@ public class AvatarStorage(IWebHostEnvironment env, HttpClient http)
         string filePath = GetFilePath(userId);
         await using var fileStream = File.Create(filePath);
         await stream.CopyToAsync(fileStream);
+        stream.Close();
 
         Cache[userId] = DateTime.UtcNow;
-
         return GetPublicUrl(userId);
     }
 }

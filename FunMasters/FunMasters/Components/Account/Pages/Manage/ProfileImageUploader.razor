@@ -1,6 +1,6 @@
 ﻿
-@inject IWebHostEnvironment WebHostEnvironment
 @inject NavigationManager Nav
+@inject AvatarStorage AvatarStorage
 
 @rendermode InteractiveServer
 
@@ -24,16 +24,7 @@
         if(_browserFile == null)
             return;
         
-        var uploadsDir = Path.Combine(WebHostEnvironment.WebRootPath, "uploads", "avatars");
-        Directory.CreateDirectory(uploadsDir);
-
-        var fileName = $"{UserId:n}";
-        var filePath = Path.Combine(uploadsDir, fileName);
-
-        await using var stream = new FileStream(filePath, FileMode.Create);
-        await _browserFile.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024).CopyToAsync(stream);
-        
-        stream.Close();
+        await AvatarStorage.SaveAvatarAsync(_browserFile.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024), UserId);
         
         Nav.Refresh(true);
     }
