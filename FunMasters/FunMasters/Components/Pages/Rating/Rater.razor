@@ -64,6 +64,7 @@
         _needsRating = await dbContext.Suggestions
             .Include(s => s.SuggestedBy)
             .Where(s => s.Status == SuggestionStatus.Finished)
+            .Where(s => s.FinishedAtUtc > User.RegistrationDateUtc)
             .Where(s => s.Ratings.All(r => r.RaterId != User.Id))
             .OrderBy(s => s.ActiveAtUtc)
             .Select(s => new RatingRecord(s, RatingValue.Perfect, null))
