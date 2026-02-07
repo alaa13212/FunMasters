@@ -151,3 +151,23 @@
     cursor: pointer;
     user-select: none;
 }
+
+.rating-stars {
+    position: relative;
+    display: inline-block;
+    color: var(--color-orange-400);
+    user-select: none;
+}
+
+.stars-background {
+    opacity: 0.5;
+}
+
+.stars-filled {
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    width: calc(var(--rating) / 10 * 100%);
+}

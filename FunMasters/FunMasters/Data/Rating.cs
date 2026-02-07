@@ -1,4 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using FunMasters.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace FunMasters.Data;
@@ -12,9 +14,19 @@ public class Rating
     public Guid RaterId { get; set; }
     public ApplicationUser? Rater { get; set; }
     
-    public int Score { get; set; } // 1..10
+    public int Score { get; set; } // 1..100
     
     [StringLength(50000)]
     public string? Comment { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+
+    [NotMapped]
+    public decimal DecimalScore
+    {
+        get => Score / 10m;
+        set => Score = (int)(value * 10);
+    }
+    
+    public string GetRatingLabel() => RatingUtils.GetRatingLabel(Score);
+    
 }

@@ -31,7 +31,7 @@ public class Suggestion
     public Cycle? Cycle { get; set; }
     
     public SuggestionStatus Status { get; set; }
-    public double? AverageRating => Ratings.Count > 0 ? Ratings.Average(r => r.Score) : null;
+    public decimal? AverageRating => Ratings.Count > 0 ? Ratings.Average(r => r.DecimalScore) : null;
     public int RatingsCount => Ratings.Count;
 
     public ICollection<Rating> Ratings { get; set; } = [];
