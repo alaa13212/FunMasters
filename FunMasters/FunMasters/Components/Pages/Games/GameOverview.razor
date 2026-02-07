@@ -31,7 +31,7 @@
                     {
                         <div class="flex md:flex-row-reverse items-center">
 
-                            <RatingStars Rating="@((int)Math.Round(game.AverageRating ?? 0))" class="mx-2 text-5xl md:text-4xl"/>
+                            <RatingStars Rating="@game.AverageRating.Value" class="mx-2 text-5xl md:text-4xl"/>
                             <span class="max-md:w-0 text-4xl md:text-3xl text-primary">@(game.AverageRating?.ToString("0.#") ?? "0")<small>/10</small></span>
                         </div>
                     }
