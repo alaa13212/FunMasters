@@ -1,6 +1,4 @@
-﻿using System.Text.RegularExpressions;
-
-namespace FunMasters.Services;
+﻿namespace FunMasters.Services;
 
 using System;
 using System.Collections.Generic;
@@ -10,13 +8,11 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
-
-
 public class HltbService
 {
     private readonly HttpClient _httpClient;
-    private const string API_URL = "https://howlongtobeat.com/api/search";
-    private string _cachedToken;
+    private const string ApiUrl = "https://howlongtobeat.com/api/finder";
+    private string? _cachedToken;
     private DateTime _tokenExpiry = DateTime.MinValue;
 
     public HltbService(HttpClient httpClient)
@@ -29,7 +25,7 @@ public class HltbService
         _httpClient.DefaultRequestHeaders.Add("Referer", "https://howlongtobeat.com/");
     }
 
-    public async Task<HltbGameResult> SearchGameAsync(string gameName, string? authToken = null)
+    public async Task<HltbGameResult?> SearchGameAsync(string gameName, string? authToken = null)
     {
         if (string.IsNullOrWhiteSpace(gameName))
             throw new ArgumentException("Game name cannot be empty", nameof(gameName));
@@ -73,7 +69,7 @@ public class HltbService
                 authToken = await GetAuthTokenAsync();
             }
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, API_URL);
+            using var request = new HttpRequestMessage(HttpMethod.Post, ApiUrl);
             request.Content = content;
             request.Headers.Add("x-auth-token", authToken);
 
@@ -121,17 +117,17 @@ public class HltbService
         {
             var currentMS = (long)(DateTime.Now - DateTime.UnixEpoch).TotalMilliseconds;
             // Fetch the main page to extract the auth token from the JavaScript
-            var response = await _httpClient.GetAsync($"https://howlongtobeat.com/api/search/init?t={currentMS}");
+            var response = await _httpClient.GetAsync($"{ApiUrl}/init?t={currentMS}");
             response.EnsureSuccessStatusCode();
 
             var responseJson = await response.Content.ReadAsStringAsync();
-            TokenClass token = JsonSerializer.Deserialize<TokenClass>(responseJson);
+            TokenClass? token = JsonSerializer.Deserialize<TokenClass>(responseJson);
             
 
             if (token != null)
             {
                 _cachedToken = token.Token;
-                _tokenExpiry = DateTime.UtcNow.AddHours(1);
+                _tokenExpiry = DateTime.UtcNow.AddHours(24);
                 return _cachedToken;
             }
 
