@@ -102,33 +102,8 @@
                         </div>
                     }
 
-                    <div class="divider text-2xl">Reviews</div>
-                    @if (!game.Ratings.Any())
-                    {
-                        <span class="text-center text-xl">No reviews yet</span>
-                    }
 
-                    <div class="grid grid-cols-1 md:grid-cols-fill-[350px] gap-5">
-                        @foreach (var ratingModel in _ratings)
-                        {
-                            var rating = ratingModel.Rating;
-                            <div class="flex flex-col transition-all duration-300">
-                                <div class="flex flex-row">
-                                    <img src="@AvatarStorage.GetPublicUrl(rating.Rater!.Id)" class="me-2 w-30 h-30 mask mask-squircle"/>
-                                    <div class="flex flex-col gap-2">
-                                        <h5 class="text-xl underline">@rating.Rater!.UserName</h5>
-                                        <RatingStars Rating="@rating.DecimalScore" class="text-3xl"/>
-                                        <p class="whitespace-pre-line">@rating.DecimalScore/10 @rating.GetRatingLabel().
-                                            <span class="spoiler-text @(ratingModel.IsSpoiler ? "spoiler-on" : "")" @onclick="() => ratingModel.IsSpoiler = false">
-                                                @rating.Comment
-                                            </span>
-                                        </p>
-                                    </div>
-                                </div>
 
-                            </div>
-                        }
-                    </div>
                 }
                 @if (game.ActiveAtUtc > DateTime.UtcNow)
                 {
@@ -147,6 +122,37 @@
                     
                     <HowLongTOBeat HltbData="hltbData" HltbLoading="hltbLoading" />
                 }
+            </div>
+        </div>
+        
+        <div class="divider text-5xl my-6">Reviews</div>
+        <div class="card bg-base-200 shadow-md m-auto w-full @("@container")">
+            <div class="card-body">
+                @if (!game.Ratings.Any())
+                {
+                    <span class="text-center text-xl">No reviews yet</span>
+                }
+                <div class="grid grid-cols-1 md:grid-cols-fill-[450px] gap-5">
+                    @foreach (var ratingModel in _ratings)
+                    {
+                        var rating = ratingModel.Rating;
+                        <div class="flex flex-col transition-all duration-300">
+                            <div class="flex flex-row">
+                                <img src="@AvatarStorage.GetPublicUrl(rating.Rater!.Id)" class="me-2 w-25 h-25 mask mask-squircle"/>
+                                <div class="flex flex-col gap-2">
+                                    <h5 class="text-xl underline">@rating.Rater!.UserName</h5>
+                                    <RatingStars Rating="@rating.DecimalScore" class="text-3xl"/>
+                                    <p class="whitespace-pre-line">@rating.DecimalScore/10 @rating.GetRatingLabel().
+                                        <span class="spoiler-text @(ratingModel.IsSpoiler ? "spoiler-on" : "")" @onclick="() => ratingModel.IsSpoiler = false">
+                                            @rating.Comment
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
+
+                        </div>
+                    }
+                </div>
             </div>
         </div>
     }
