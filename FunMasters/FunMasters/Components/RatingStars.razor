@@ -1,7 +1,8 @@
-﻿
-<div @attributes="AdditionalAttributes" class="block rating-stars @RootClass" style="--rating: @Rating;">
-    <div class="stars-background">★★★★★</div>
-    <div class="stars-filled">★★★★★</div>
+﻿<div class="@RootClass">
+    <div @attributes="AdditionalAttributes" class="rating-stars" style="--rating: @Rating;">
+        <div class="stars-background">★★★★★</div>
+        <div class="stars-filled">★★★★★</div>
+    </div>
 </div>
 
 @code {
