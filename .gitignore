@@ -11,3 +11,6 @@ riderModule.iml
 # Auto Generated
 FunMasters/FunMasters/wwwroot/css/site.css
 FunMasters/FunMasters/Styles/daisyui*.mjs
+
+# Claude Code plans
+claude-plans/
