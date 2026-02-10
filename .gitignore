@@ -6,6 +6,7 @@ riderModule.iml
 /FunMasters/FunMasters/wwwroot/uploads**
 /.idea/.idea.FunMasters/.idea/data_source_mapping.xml
 /.idea/.idea.FunMasters/.idea/dataSources.xml
+.idea/.idea.FunMasters/.idea/db-forest-config.xml
 
 # Auto Generated
 FunMasters/FunMasters/wwwroot/css/site.css
