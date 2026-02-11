@@ -21,10 +21,10 @@
 @if (HltbLoading)
 {
     <div class="divider text-2xl">How Long to Beat</div>
-    <div class="flex flex-col md:flex-row gap-4 w-full">
+    <div class="flex flex-col @("@6xl:flex-row") justify-center gap-4 w-full">
         @for (int i = 0; i < 3; i++)
         {
-            <div class="card bg-base-300 shadow-lg flex-1 glare">
+            <div class="card bg-base-300 shadow-lg max-md-flex-1 min-w-[200px] glare">
                 <div class="card-body items-center text-center">
                     <div class="skeleton h-6 w-32 mb-2"></div>
                     <div class="skeleton h-12 w-20 my-2"></div>
