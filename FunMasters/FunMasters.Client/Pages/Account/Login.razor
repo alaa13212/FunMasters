@@ -1,0 +1,118 @@
+@page "/Account/Login"
+
+@using System.ComponentModel.DataAnnotations
+@inject IAccountApiService AccountApi
+@inject NavigationManager Navigation
+
+<PageTitle>Log in</PageTitle>
+
+<div class="hero bg-base-200 h-full rounded-box items-start pt-20">
+    <div class="hero-content flex-col w-full">
+        <div class="text-center lg:text-left mb-12">
+            <h1 class="text-5xl font-bold">Login now!</h1>
+        </div>
+        <div class="card bg-base-100 w-full max-w-sm shrink-0 shadow-2xl">
+            <div class="card-body">
+                <EditForm Model="Input" OnValidSubmit="LoginUser" FormName="login">
+                    <DataAnnotationsValidator/>
+                    <ValidationSummary class="text-error" role="alert"/>
+                    <label class="floating-label mb-5 mt-3">
+                        <span>Login</span>
+                        <InputText @bind-Value="Input.Email" id="Input.Email" class="input w-full" autocomplete="username" aria-required="true" placeholder="name@example.com"/>
+                        <ValidationMessage For="() => Input.Email" class="text-error"/>
+                    </label>
+                    <label class="floating-label mb-5">
+                        <span>Password</span>
+                        <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="input w-full" autocomplete="current-password" aria-required="true" placeholder="password"/>
+                        <ValidationMessage For="() => Input.Password" class="text-error"/>
+                    </label>
+                    <label class="label mb-3">
+                        <InputCheckbox @bind-Value="Input.RememberMe" class="checkbox"/>
+                        Remember me
+                    </label>
+                    <div>
+                        <button type="submit" class="w-full btn btn-primary" disabled="@_isLoading">
+                            @if (_isLoading)
+                            {
+                                <span class="loading loading-spinner"></span>
+                            }
+                            Log in
+                        </button>
+                    </div>
+                </EditForm>
+
+                <StatusMessage Message="@_errorMessage"/>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string? _errorMessage;
+    private bool _isLoading;
+
+    [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
+
+    [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
+
+    private async Task LoginUser()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var request = new LoginRequest
+            {
+                Email = Input.Email,
+                Password = Input.Password,
+                RememberMe = Input.RememberMe
+            };
+
+            var response = await AccountApi.LoginAsync(request);
+
+            if (response.Succeeded)
+            {
+                // Force full page reload to re-serialize auth state from server
+                var returnUrl = string.IsNullOrEmpty(ReturnUrl) ? "/" : ReturnUrl;
+
+                // If user needs to change password, redirect to change password page
+                if (response.RequirePasswordChange)
+                {
+                    Navigation.NavigateTo("Account/Manage/ChangePassword", forceLoad: true);
+                }
+                else
+                {
+                    Navigation.NavigateTo(returnUrl, forceLoad: true);
+                }
+            }
+            else if (response.IsLockedOut)
+            {
+                Navigation.NavigateTo("Account/Lockout", forceLoad: true);
+            }
+            else
+            {
+                _errorMessage = response.ErrorMessage ?? "Error: Invalid login attempt.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required] public string Email { get; set; } = "";
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+
+        [Display(Name = "Remember me?")] public bool RememberMe { get; set; } = true;
+    }
+}

@@ -6,6 +6,7 @@
 
 @source not "./tailwindcss.exe";
 @source not "./daisyui{,*}.mjs";
+@source "../../FunMasters.Client/";
 
 @plugin "./daisyui.mjs";
 

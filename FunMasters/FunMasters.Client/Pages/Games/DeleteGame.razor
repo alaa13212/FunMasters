@@ -1,0 +1,97 @@
+@page "/my-games/delete/{Id:guid}"
+@attribute [Authorize]
+@inject ISuggestionApiService SuggestionApi
+@inject NavigationManager Nav
+
+<PageTitle>My Games</PageTitle>
+
+<div class="m-5">
+    <h3 class="text-2xl mb-4">Delete Suggestion</h3>
+
+    @if (_loading)
+    {
+        <p><em>Loading…</em></p>
+    }
+    else if (_model == null)
+    {
+        <div class="alert alert-error w-max my-5">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+
+            <span>Suggestion not found or you don't have permission.</span>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-error w-max my-5">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+
+            <span>
+                Are you sure you want to delete "<strong>@_model!.Title</strong>"?
+            </span>
+        </div>
+
+        <button class="btn btn-error" @onclick="ConfirmDelete" disabled="@_isDeleting">
+            @if (_isDeleting)
+            {
+                <span class="loading loading-spinner"></span>
+            }
+            Delete
+        </button>
+        <a class="btn btn-secondary ms-2" href="/my-games">Cancel</a>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private SuggestionDto? _model;
+    private bool _loading = true;
+    private bool _isDeleting;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Get user's suggestions and find this one
+            var suggestions = await SuggestionApi.GetMySuggestionsAsync();
+            _model = suggestions.FirstOrDefault(s => s.Id == Id);
+        }
+        catch (Exception)
+        {
+            // Handle error
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (_model == null) return;
+
+        _isDeleting = true;
+
+        try
+        {
+            var result = await SuggestionApi.DeleteSuggestionAsync(Id);
+
+            if (result.Success)
+            {
+                Nav.NavigateTo("/my-games");
+            }
+        }
+        catch (Exception)
+        {
+            // Handle error
+        }
+        finally
+        {
+            _isDeleting = false;
+        }
+    }
+}

@@ -1,0 +1,16 @@
+﻿@inherits LayoutComponentBase
+
+<div class="flex flex-col grow">
+    <div class="drawer grow">
+        <input id="main-drawer" type="checkbox" class="drawer-toggle"/>
+        
+        <div class="drawer-content flex flex-col min-h-full">
+            <NavMenu/>
+            <main class="min-h-full">
+                @Body
+            </main>
+        </div>
+        
+        <NavMenuSide/>
+    </div>
+</div>

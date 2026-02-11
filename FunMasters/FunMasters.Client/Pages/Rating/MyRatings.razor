@@ -1,0 +1,114 @@
+@page "/my-ratings"
+@attribute [Authorize(Roles = "Member")]
+@inject IRatingApiService RatingApi
+
+<PageTitle>My Ratings</PageTitle>
+
+<div class="m-5">
+    <Rater NeedsRating="@NeedsRating"/>
+
+    @if (RatingsModel is { Count: > 0 })
+    {
+        <h4 class="text-4xl text-center my-4">My Ratings</h4>
+        <div class="grid grid-cols-1 md:grid-cols-fill-[600px] gap-5">
+            @foreach (var ratingModel in RatingsModel)
+            {
+                <div class="@("@container")">
+                    <div class="card @("@xl:card-side") bg-base-300 shadow-xs">
+                        <figure class="@("@xl:w-3/7 @max-xl:max-h-[30vh]")">
+                            <img src="@ratingModel.Rating.CoverImageUrl" alt="@ratingModel.Rating.Title" class="w-full"/>
+                        </figure>
+                        <div class="card-body">
+                            <h3 class="text-xl mb-0 text-primary">@ratingModel.Rating.Title</h3>
+                            <div>
+                                <p class="divider">My Rating</p>
+                                <EditForm Model="ratingModel" OnValidSubmit="() => UpdateRating(ratingModel)" FormName="@("rate-" + ratingModel.Rating.SuggestionId.ToString("n"))">
+                                    <DataAnnotationsValidator/>
+                                    <fieldset class="fieldset">
+                                        <legend class="fieldset-legend">Score: @ratingModel.Score @ratingModel.GetRatingLabel()</legend>
+
+                                        <input type="range" @bind="ratingModel.Score" @bind:event="oninput" class="range w-full" min="0.1" max="10" step="0.1"/>
+                                    </fieldset>
+                                    <fieldset>
+                                        <legend class="fieldset-legend">Comment</legend>
+                                        <InputTextArea @bind-Value="ratingModel.Comment" id="@("rate-comment-" + ratingModel.Rating.SuggestionId.ToString("n"))" class="textarea h-24 w-full" placeholder="Optional"/>
+
+                                    </fieldset>
+                                    <div class="form-floating mb-3">
+                                        <label for="@("rate-comment-" + ratingModel.Rating.SuggestionId.ToString("n"))" class="form-label"></label>
+                                    </div>
+                                    <div>
+                                        <button type="submit" class="btn btn-lg btn-primary w-full" disabled="@ratingModel.IsSubmitting">
+                                            @if (ratingModel.IsSubmitting)
+                                            {
+                                                <span class="loading loading-spinner"></span>
+                                            }
+                                            Update
+                                        </button>
+                                    </div>
+                                </EditForm>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [PersistentState] public List<RatingModel>? RatingsModel { get; set; }
+    [PersistentState] public List<NeedRatingModel>? NeedsRating { get; set; }
+    
+    [CascadingParameter] private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthenticationStateTask!;
+            if (authState.User.Identity?.IsAuthenticated != true)
+                return;
+            
+            if (!authState.User.IsInRole("Member"))
+                return;
+            
+            NeedsRating ??= (await RatingApi.GetUnratedSuggestionsAsync()).Select(s => new NeedRatingModel(s)).ToList();
+            RatingsModel ??= (await RatingApi.GetMyRatingsAsync()).Select(r => new RatingModel(r)).ToList();
+        }
+        catch (Exception e)
+        {
+            // Handle error
+        }
+    }
+
+    private async Task UpdateRating(RatingModel model)
+    {
+        model.IsSubmitting = true;
+
+        try
+        {
+            var request = new UpdateRatingRequest
+            {
+                Score = (int)(model.Score * 10),
+                Comment = model.Comment
+            };
+
+            var result = await RatingApi.UpdateRatingAsync(model.Rating.RatingId, request);
+
+            if (!result.Success)
+            {
+                // Handle error - could show message to user
+            }
+        }
+        catch (Exception)
+        {
+            // Handle error
+        }
+        finally
+        {
+            model.IsSubmitting = false;
+        }
+    }
+
+}

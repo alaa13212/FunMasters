@@ -1,0 +1,67 @@
+@inject NavigationManager Nav
+@inject IAccountApiService AccountApi
+
+<InputFile OnChange="OnFileSelected" accept="image/*" class="file-input file-input-lg w-full mb-2"/>
+
+<button type="button" disabled="@(_browserFile == null || _isUploading)" @onclick="Upload" class="w-full btn btn-lg btn-primary">
+    @if (_isUploading)
+    {
+        <span class="loading loading-spinner"></span>
+    }
+    Upload
+</button>
+
+@if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <div class="alert alert-error mt-2">
+        @_errorMessage
+    </div>
+}
+
+@code {
+    private IBrowserFile? _browserFile;
+    private bool _isUploading;
+    private string? _errorMessage;
+
+    [Parameter, EditorRequired]
+    public Guid UserId { get; set; }
+
+    private void OnFileSelected(InputFileChangeEventArgs e)
+    {
+        _browserFile = e.FileCount == 1 ? e.File : null;
+        _errorMessage = null;
+    }
+
+    private async Task Upload()
+    {
+        if (_browserFile == null)
+            return;
+
+        _isUploading = true;
+        _errorMessage = null;
+
+        try
+        {
+            using var stream = _browserFile.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+            var result = await AccountApi.UploadAvatarAsync(stream, _browserFile.Name);
+
+            if (result.Success)
+            {
+                // Force full page reload to refresh avatar with new timestamp in auth claims
+                Nav.NavigateTo(Nav.Uri, forceLoad: true);
+            }
+            else
+            {
+                _errorMessage = result.ErrorMessage ?? "Failed to upload avatar.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isUploading = false;
+        }
+    }
+}

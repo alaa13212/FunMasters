@@ -1,0 +1,255 @@
+@page "/my-games/edit/{Id:guid}"
+@attribute [Authorize]
+@implements IDisposable
+
+@inject ISuggestionApiService SuggestionApi
+@inject IIgdbApiService IgdbApi
+@inject NavigationManager Nav
+
+<PageTitle>My Games | Edit</PageTitle>
+
+<div class="m-5">
+    <h3 class="text-2xl text-center md-5">Edit Game Suggestion</h3>
+    @if (_loading)
+    {
+        <p><em>Loading…</em></p>
+    }
+    else if (Model == null)
+    {
+        <div class="alert alert-danger">Suggestion not found or you don't have permission.</div>
+    }
+    else
+    {
+        <div class="card bg-base-200 shadow-sm">
+            <div class="card-body">
+                <EditForm Model="Model" OnValidSubmit="HandleSave">
+                    <DataAnnotationsValidator/>
+                    <ValidationSummary/>
+                    <fieldset class="fieldset gap-5">
+                        <legend class="fieldset-legend">Game Details</legend>
+                        @if (!string.IsNullOrEmpty(_errorMessage))
+                        {
+                            <div class="alert alert-warning">@_errorMessage</div>
+                        }
+
+                        <label class="floating-label">
+                            <span>Title</span>
+                            <InputText @bind-Value="Model.Title" class="input input-md"/>
+                        </label>
+
+                        <label class="floating-label">
+                            <span>Order</span>
+                            <InputNumber @bind-Value="Model.Order" class="input input-md" readonly/>
+                        </label>
+
+                        <label class="floating-label">
+                            <span>Steam link</span>
+                            <InputText @bind-Value="Model.SteamLink" class="input input-md"/>
+                        </label>
+
+                        <label class="label">
+                            <InputCheckbox id="IsHidden" @bind-Value="Model.IsHidden" class="checkbox"/>
+                            Is Hidden
+                        </label>
+                    </fieldset>
+                    <div class="divider"></div>
+                    <h3>Game Cover Art</h3>
+                    <button type="button" class="btn btn-primary my-5" @onclick="TryGetCoverArt" disabled="@(string.IsNullOrWhiteSpace(Model.Title) || Model.Title.Length < 3 || _isLoadingCovers)">Search For Cover Art</button>
+                    <div class="grid grid-cols-1 md:grid-cols-fit-[250px] gap-5">
+                        @if (_isLoadingCovers)
+                        {
+                            @for (int i = 0; i < 4; i++)
+                            {
+                                <div class="p-3 gap-5 flex flex-col items-center justify-between lg:max-w-[250px]">
+                                    <div class="skeleton w-full aspect-3/4"></div>
+                                    <div class="skeleton w-full h-12"></div>
+                                </div>
+                            }
+                        }
+                        @foreach (var coverArt in _suggestedCoverArts)
+                        {
+                            <div class="card-hover rounded-box bg-base-300 p-3 gap-5 relative flex flex-col items-center justify-between" @onclick="@(() => PickGame(coverArt))">
+                                <img src="@coverArt.CoverUrl"/>
+                                <button type="button" class="btn btn-info w-full stretched-link">Pick This</button>
+                            </div>
+                        }
+
+                        @if (_suggestedCoverArts.Any() && Model.CoverArtUrl != null)
+                        {
+                            <hr/>
+                        }
+
+                    </div>
+                    @if (Model.CoverArtUrl != null)
+                    {
+                        <img src="@Model.CoverArtUrl" class="img-fluid m-3"/>
+                    }
+
+                    <div class="card-actions mt-5">
+                        <button type="submit" class="btn btn-primary" disabled="@_isSubmitting">
+                            @if (_isSubmitting)
+                            {
+                                <span class="loading loading-spinner"></span>
+                            }
+                            Save
+                        </button>
+                        <a class="btn btn-secondary ms-2" href="/my-games">Cancel</a>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    [PersistentState] public InputModel? Model { get; set; }
+    private bool _loading = true;
+    private bool _isSubmitting;
+    private string? _errorMessage;
+
+    private bool _isLoadingCovers;
+
+    private CancellationTokenSource? _cts;
+    protected CancellationToken CancellationToken => _cts?.Token ?? CancellationToken.None;
+
+    private readonly List<IgdbGameDto> _suggestedCoverArts = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        StartOperation();
+
+        try
+        {
+            if (Model == null)
+                return;
+            
+            // Get user's suggestions and find this one
+            SuggestionDto? suggestion = await SuggestionApi.GetMySuggestionAsync(Id);
+            if (suggestion != null)
+            {
+                Model = new InputModel
+                {
+                    Title = suggestion.Title,
+                    Order = suggestion.Order,
+                    IsHidden = suggestion.IsHidden,
+                    SteamLink = suggestion.SteamLink,
+                    CoverArtUrl = suggestion.CoverImageUrl,
+                };
+            }
+        }
+        catch (Exception)
+        {
+            // Handle error
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task HandleSave()
+    {
+        StartOperation();
+
+        if (Model == null) return;
+
+        _errorMessage = null;
+        _isSubmitting = true;
+
+        try
+        {
+            var request = new UpdateSuggestionRequest
+            {
+                Title = Model.Title,
+                Order = Model.Order,
+                IsHidden = Model.IsHidden,
+                CoverArtUrl = Model.CoverArtUrl,
+                SteamLink = Model.SteamLink
+            };
+
+            var result = await SuggestionApi.UpdateSuggestionAsync(Id, request);
+
+            if (result.Success)
+            {
+                Nav.NavigateTo("/my-games");
+            }
+            else
+            {
+                _errorMessage = result.ErrorMessage ?? "Failed to update game";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private async Task TryGetCoverArt()
+    {
+        if (string.IsNullOrWhiteSpace(Model?.Title))
+            return;
+
+        StartOperation();
+        _isLoadingCovers = true;
+        _suggestedCoverArts.Clear();
+
+        try
+        {
+            var igdbGames = await IgdbApi.SearchGamesAsync(Model.Title);
+            _suggestedCoverArts.AddRange(igdbGames);
+        }
+        catch (Exception)
+        {
+            // Handle error silently
+        }
+        finally
+        {
+            _isLoadingCovers = false;
+        }
+    }
+
+    private void PickGame(IgdbGameDto game)
+    {
+        _suggestedCoverArts.Clear();
+        Model!.CoverArtUrl = game.CoverUrl;
+        Model.SteamLink = game.SteamUrl;
+        Model.Title = game.Name;
+    }
+
+    private void StartOperation()
+    {
+        if (_cts != null)
+        {
+            _cts.Cancel();
+            _cts.Dispose();
+        }
+        _cts = new CancellationTokenSource();
+    }
+
+    public void Dispose()
+    {
+        GC.SuppressFinalize(this);
+        if (_cts != null)
+        {
+            _cts.Cancel();
+            _cts.Dispose();
+            _cts = null;
+        }
+    }
+
+    public class InputModel
+    {
+        public string Title { get; set; } = "";
+        public int Order { get; set; }
+        public bool IsHidden { get; set; }
+        public string? SteamLink { get; set; }
+        public string? CoverArtUrl { get; set; }
+    }
+
+}

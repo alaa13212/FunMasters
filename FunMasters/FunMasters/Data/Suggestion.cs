@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using FunMasters.Shared;
 
 namespace FunMasters.Data;
 
@@ -35,12 +36,4 @@ public class Suggestion
     public int RatingsCount => Ratings.Count;
 
     public ICollection<Rating> Ratings { get; set; } = [];
-}
-
-public enum SuggestionStatus
-{
-    Pending,
-    Queued,
-    Active,
-    Finished,
 }
