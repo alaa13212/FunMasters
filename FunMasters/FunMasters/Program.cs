@@ -34,6 +34,9 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(options => options.Us
 builder.Services.AddScoped<ApplicationDbContext>(sp =>
     sp.GetRequiredService<IDbContextFactory<ApplicationDbContext>>().CreateDbContext());
 
+builder.Services.AddResponseCompression()
+    .AddRequestDecompression();
+
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
@@ -112,6 +115,9 @@ else
 // Create a file provider with change monitoring enabled
 var uploadsPath = Path.Combine(app.Environment.WebRootPath, "uploads");
 var fileProvider = new PhysicalFileProvider(uploadsPath);
+
+app.UseResponseCompression();
+app.UseRequestDecompression();
 
 // Serve static files from /uploads/avatars
 app.UseStaticFiles(new StaticFileOptions
