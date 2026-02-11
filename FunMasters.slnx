@@ -1,3 +1,5 @@
 <Solution>
   <Project Path="FunMasters/FunMasters/FunMasters.csproj" />
+  <Project Path="FunMasters/FunMasters.Shared/FunMasters.Shared.csproj" />
+  <Project Path="FunMasters/FunMasters.Client/FunMasters.Client.csproj" />
 </Solution>

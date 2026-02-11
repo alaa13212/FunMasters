@@ -1,5 +1,5 @@
 ﻿using FunMasters.Data;
-using FunMasters.Services;
+using FunMasters.Shared;
 
 namespace FunMasters.Models;
 

@@ -1,0 +1,112 @@
+@page "/admin/users/add"
+@attribute [Authorize(Roles = "Admin")]
+@inject IAdminApiService AdminApi
+@inject NavigationManager Nav
+
+<PageTitle>Add User</PageTitle>
+<div class="m-5">
+    <h3 class="text-2xl text-center md-5">Add User</h3>
+
+    <div class="card bg-base-200 shadow-sm">
+        <div class="card-body">
+            <EditForm Model="@_model" OnValidSubmit="HandleValidSubmit" class="flex flex-col gap-4 w-sm">
+                <DataAnnotationsValidator/>
+                <ValidationSummary/>
+
+                @if (!string.IsNullOrEmpty(_errorMessage))
+                {
+                    <div class="alert alert-error">@_errorMessage</div>
+                }
+
+                <label class="floating-label">
+                    <span>Cycle Order</span>
+                    <InputNumber class="input" @bind-Value="_model.CycleOrder"/>
+                </label>
+
+                <label class="floating-label">
+                    <span>Email</span>
+                    <InputText class="input" @bind-Value="_model.Email"/>
+                </label>
+
+                <label class="floating-label">
+                    <span>Display Name</span>
+                    <InputText class="input" @bind-Value="_model.UserName"/>
+                </label>
+
+                <label class="floating-label">
+                    <span>Password</span>
+                    <InputText class="input" type="password" @bind-Value="_model.Password"/>
+                </label>
+
+                <label class="floating-label">
+                    <span>Role</span>
+                    <InputSelect class="select" @bind-Value="_role">
+                        <option value="Member">Member</option>
+                        <option value="Admin">Admin</option>
+                    </InputSelect>
+                </label>
+
+                <button type="submit" class="btn btn-primary" disabled="@_isSubmitting">
+                    @if (_isSubmitting)
+                    {
+                        <span class="loading loading-spinner"></span>
+                    }
+                    Create
+                </button>
+            </EditForm>
+
+        </div>
+    </div>
+</div>
+
+@code {
+    private InputModel _model = new();
+    private string _role = "Member";
+    private string? _errorMessage;
+    private bool _isSubmitting;
+
+    private async Task HandleValidSubmit()
+    {
+        _errorMessage = null;
+        _isSubmitting = true;
+
+        try
+        {
+            var request = new CreateUserRequest
+            {
+                Email = _model.Email,
+                UserName = _model.UserName,
+                Password = _model.Password,
+                CycleOrder = _model.CycleOrder,
+                IsAdmin = _role == "Admin"
+            };
+
+            var result = await AdminApi.CreateUserAsync(request);
+
+            if (result.Success)
+            {
+                Nav.NavigateTo("/admin/users");
+            }
+            else
+            {
+                _errorMessage = result.ErrorMessage ?? "Failed to create user";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private class InputModel
+    {
+        public string Email { get; set; } = "";
+        public string UserName { get; set; } = "";
+        public string Password { get; set; } = "";
+        public int CycleOrder { get; set; }
+    }
+}

@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using FunMasters.Services;
+using FunMasters.Shared;
 using Microsoft.EntityFrameworkCore;
 
 namespace FunMasters.Data;

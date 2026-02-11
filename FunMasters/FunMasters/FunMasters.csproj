@@ -24,4 +24,9 @@
       </Content>
     </ItemGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="..\FunMasters.Shared\FunMasters.Shared.csproj" />
+        <ProjectReference Include="..\FunMasters.Client\FunMasters.Client.csproj" />
+    </ItemGroup>
+
 </Project>

@@ -1,0 +1,99 @@
+@page "/admin/users/delete/{id}"
+@attribute [Authorize(Roles = "Admin")]
+@inject IAdminApiService AdminApi
+@inject NavigationManager Nav
+
+<PageTitle>Delete User</PageTitle>
+
+<div class="m-5">
+    <h3 class="text-2xl mb-4">Delete User</h3>
+
+    @if (_loading)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else if (User == null)
+    {
+        <div class="alert alert-error">User not found</div>
+    }
+    else
+    {
+        <div class="alert alert-error w-max my-5">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span>
+                Are you sure you want to delete <strong>@User.UserName</strong> (@User.Email)?
+            </span>
+        </div>
+
+        <button class="btn btn-error" @onclick="ConfirmDelete" disabled="@_isDeleting">
+            @if (_isDeleting)
+            {
+                <span class="loading loading-spinner"></span>
+            }
+            Yes, Delete
+        </button>
+        <button class="btn btn-secondary ms-2" @onclick="@(() => Nav.NavigateTo("/admin/users"))">Cancel</button>
+    }
+</div>
+
+@code {
+    [Parameter] public string? Id { get; set; }
+
+    [PersistentState] public UserDto? User { get; set; }
+    private bool _loading = true;
+    private bool _isDeleting;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id is null || !Guid.TryParse(Id, out var userId))
+        {
+            Nav.NavigateTo("/admin/users");
+            return;
+        }
+
+        try
+        {
+            User ??= await AdminApi.GetUserAsync(userId);
+            if (User == null)
+            {
+                Nav.NavigateTo("/admin/users");
+            }
+        }
+        catch (Exception)
+        {
+            // Handle error
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (User == null || Id is null || !Guid.TryParse(Id, out var userId))
+            return;
+
+        _isDeleting = true;
+
+        try
+        {
+            var result = await AdminApi.DeleteUserAsync(userId);
+
+            if (result.Success)
+            {
+                Nav.NavigateTo("/admin/users");
+            }
+        }
+        catch (Exception)
+        {
+            // Handle error
+        }
+        finally
+        {
+            _isDeleting = false;
+        }
+    }
+}

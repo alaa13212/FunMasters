@@ -1,11 +1,14 @@
+using FunMasters.Authentication;
+using FunMasters.Components;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using FunMasters.Components;
-using FunMasters.Components.Account;
 using FunMasters.Data;
+using FunMasters.Endpoints;
 using FunMasters.Jobs;
 using FunMasters.Services;
+using FunMasters.Shared.Services;
 using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,19 +16,23 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
-    .AddAuthenticationStateSerialization();
+    .AddInteractiveWebAssemblyComponents()
+    .AddAuthenticationStateSerialization(options =>
+    {
+        // Serialize all claims including our custom avatar_timestamp claim
+        options.SerializeAllClaims = true;
+    });
 
 builder.Services.AddCascadingAuthenticationState();
-builder.Services.AddScoped<IdentityUserAccessor>();
-builder.Services.AddScoped<IdentityRedirectManager>();
-builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
-
+builder.Services.AddScoped<AuthenticationStateProvider, PersistingRevalidatingAuthenticationStateProvider>();
 builder.Services.AddHostedService<QueueManagerJob>();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
                        throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddScoped<ApplicationDbContext>(sp =>
+    sp.GetRequiredService<IDbContextFactory<ApplicationDbContext>>().CreateDbContext());
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -37,16 +44,55 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
     .AddSignInManager()
     .AddDefaultTokenProviders();
 
+// Configure cookie to return 401/403 for API calls instead of redirecting
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.Events.OnRedirectToLogin = ctx =>
+    {
+        if (ctx.Request.Path.StartsWithSegments("/api"))
+        {
+            ctx.Response.StatusCode = 401;
+            return Task.CompletedTask;
+        }
+        ctx.Response.Redirect(ctx.RedirectUri);
+        return Task.CompletedTask;
+    };
+    options.Events.OnRedirectToAccessDenied = ctx =>
+    {
+        if (ctx.Request.Path.StartsWithSegments("/api"))
+        {
+            ctx.Response.StatusCode = 403;
+            return Task.CompletedTask;
+        }
+        ctx.Response.Redirect(ctx.RedirectUri);
+        return Task.CompletedTask;
+    };
+});
+
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("RequireAdmin", policy => policy.RequireRole("Admin"));
 });
+
+// Add claims transformation to include avatar timestamp
+builder.Services.AddScoped<IClaimsTransformation, AvatarClaimsTransformation>();
 
 builder.Services.AddHttpClient<IgdbService>();
 builder.Services.AddHttpClient<HltbService>();
 builder.Services.AddScoped<GameCoverStorage>();
 builder.Services.AddScoped<AvatarStorage>();
 builder.Services.AddScoped<QueueManager>();
+
+// Enable access to HttpContext in services
+builder.Services.AddHttpContextAccessor();
+
+// Business logic services (server implementations of shared interfaces)
+builder.Services.AddScoped<ISuggestionApiService, SuggestionService>();
+builder.Services.AddScoped<IRatingApiService, RatingService>();
+builder.Services.AddScoped<IAdminApiService, AdminService>();
+builder.Services.AddScoped<IAccountApiService, AccountService>();
+builder.Services.AddScoped<IIgdbApiService, IgdbApiService>();
+builder.Services.AddScoped<IHltbApiService, HltbApiService>();
 
 var app = builder.Build();
 
@@ -85,10 +131,17 @@ app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+    .AddInteractiveServerRenderMode()
+    .AddInteractiveWebAssemblyRenderMode()
+    .AddAdditionalAssemblies(typeof(FunMasters.Client._Imports).Assembly);
 
-// Add additional endpoints required by the Identity /Account Razor components.
-app.MapAdditionalIdentityEndpoints();
+// Map API endpoints
+app.MapSuggestionEndpoints();
+app.MapRatingEndpoints();
+app.MapAdminEndpoints();
+app.MapAccountEndpoints();
+app.MapIgdbEndpoints();
+app.MapHltbEndpoints();
 
 using (var scope = app.Services.CreateScope()) {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();

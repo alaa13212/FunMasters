@@ -1,0 +1,25 @@
+﻿@inject NavigationManager Navigation
+@inject IAccountApiService AccountApi
+
+<ul class="menu menu-lg w-full">
+    <li>
+        <NavLink ActiveClass="menu-active" href="Account/Manage" Match="NavLinkMatch.All">Profile</NavLink>
+    </li>
+    <li>
+        <NavLink ActiveClass="menu-active" href="Account/Manage/ChangePassword">Password</NavLink>
+    </li>
+    <li>
+        <button type="button" @onclick="HandleLogoutAsync" class="stretched-link">
+            Logout
+        </button>
+    </li>
+</ul>
+
+@code {
+    private async Task HandleLogoutAsync()
+    {
+        await AccountApi.LogoutAsync();
+        // Force full page reload to re-serialize auth state
+        Navigation.NavigateTo("/", forceLoad: true);
+    }
+}

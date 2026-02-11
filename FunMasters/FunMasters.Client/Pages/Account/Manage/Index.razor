@@ -1,0 +1,129 @@
+@page "/Account/Manage"
+
+@inject IAccountApiService AccountApi
+@inject NavigationManager Navigation
+
+<PageTitle>Profile</PageTitle>
+
+@if (_isLoading)
+{
+    <div class="flex justify-center items-center py-12">
+        <span class="loading loading-spinner loading-lg"></span>
+    </div>
+}
+else if (_profile != null)
+{
+    <StatusMessage Message="@_statusMessage"/>
+
+    <h3 class="text-xl mb-2">Profile</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="card bg-base-300 shadow-lg">
+            <div class="card-body items-center text-center">
+                <div class="my-2">
+                    <img src="@_profile.AvatarUrl" class="w-200px mask mask-squircle" alt="Profile Image"/>
+                </div>
+                <ProfileImageUploader UserId="_profile.Id"/>
+            </div>
+        </div>
+
+        <EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync">
+            <div class="card bg-base-300 shadow-lg">
+                <div class="card-body flex flex-col justify-items-stretch">
+                    <DataAnnotationsValidator/>
+                    <ValidationSummary class="text-error" role="alert"/>
+                    <label class="floating-label mb-5 mt-3">
+                        <span>Email</span>
+                        <InputText @bind-Value="Input.Email" id="Input.Email" class="input w-full" placeholder="Enter your email"/>
+                    </label>
+                    <label class="floating-label mb-5">
+                        <span>Display Name</span>
+                        <InputText type="text" @bind-Value="@Input.UserName" id="username" class="input w-full" placeholder="Choose your display name."/>
+                    </label>
+                    <div class="card-actions justify-stretch">
+                        <button type="submit" class="btn btn-lg btn-primary w-full" disabled="@_isSaving">
+                            @if (_isSaving)
+                            {
+                                <span class="loading loading-spinner"></span>
+                            }
+                            Save
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </EditForm>
+    </div>
+}
+
+@code {
+    private ProfileDto? _profile;
+    private bool _isLoading = true;
+    private bool _isSaving;
+    private string? _statusMessage;
+
+    [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _profile = await AccountApi.GetProfileAsync();
+            if (_profile != null)
+            {
+                Input.Email ??= _profile.Email;
+                Input.UserName ??= _profile.UserName;
+            }
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task OnValidSubmitAsync()
+    {
+        if (_profile == null)
+            return;
+
+        _isSaving = true;
+        _statusMessage = null;
+
+        try
+        {
+            var request = new UpdateProfileRequest
+            {
+                Email = Input.Email ?? "",
+                UserName = Input.UserName ?? ""
+            };
+
+            var result = await AccountApi.UpdateProfileAsync(request);
+
+            if (result.Success)
+            {
+                // Force reload to refresh auth state with new username/email
+                Navigation.NavigateTo("Account/Manage?status=Your profile has been updated", forceLoad: true);
+            }
+            else
+            {
+                _statusMessage = result.ErrorMessage ?? "Error: Failed to update profile.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private sealed class InputModel
+    {
+        public string? UserName { get; set; }
+        public string? Email { get; set; }
+    }
+}

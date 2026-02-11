@@ -1,4 +1,5 @@
 ﻿using FunMasters.Data;
+using FunMasters.Shared;
 using Microsoft.EntityFrameworkCore;
 
 namespace FunMasters.Services;

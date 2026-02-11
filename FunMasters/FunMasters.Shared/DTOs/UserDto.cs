@@ -1,0 +1,11 @@
+namespace FunMasters.Shared.DTOs;
+
+public class UserDto
+{
+    public Guid Id { get; set; }
+    public string Email { get; set; } = null!;
+    public string UserName { get; set; } = null!;
+    public int CycleOrder { get; set; }
+    public List<string> Roles { get; set; } = [];
+    public string? AvatarUrl { get; set; }
+}

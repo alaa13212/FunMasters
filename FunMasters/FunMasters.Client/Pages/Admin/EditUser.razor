@@ -1,0 +1,167 @@
+@page "/admin/users/edit/{id}"
+@attribute [Authorize(Roles = "Admin")]
+@inject IAdminApiService AdminApi
+@inject NavigationManager Nav
+
+<PageTitle>Edit User</PageTitle>
+
+<div class="m-5">
+    <h3 class="text-2xl text-center md-5">Edit User</h3>
+
+    <div class="card bg-base-200 shadow-sm">
+        <div class="card-body">
+
+            @if (_loading)
+            {
+                <p><em>Loading...</em></p>
+            }
+            else if (Model == null)
+            {
+                <div class="alert alert-error">User not found</div>
+            }
+            else
+            {
+                <EditForm Model="Model" OnValidSubmit="HandleValidSubmit" class="flex flex-col gap-4 w-sm">
+                    <DataAnnotationsValidator/>
+                    <ValidationSummary/>
+
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-error">@_errorMessage</div>
+                    }
+
+                    <label class="floating-label">
+                        <span>Cycle Order</span>
+                        <InputNumber class="input" @bind-Value="Model.CycleOrder"/>
+                    </label>
+
+                    <label class="floating-label">
+                        <span>Email</span>
+                        <InputText class="input" @bind-Value="Model.Email"/>
+                    </label>
+
+                    <label class="floating-label">
+                        <span>Display Name</span>
+                        <InputText class="input" @bind-Value="Model.UserName"/>
+                    </label>
+
+                    <label class="floating-label">
+                        <span>Role</span>
+                        <InputSelect class="select" @bind-Value="_selectedRole">
+                            <option value="Member">Member</option>
+                            <option value="Admin">Admin</option>
+                        </InputSelect>
+                    </label>
+
+                    <div>
+                        <button type="submit" class="btn btn-primary" disabled="@_isSubmitting">
+                            @if (_isSubmitting)
+                            {
+                                <span class="loading loading-spinner"></span>
+                            }
+                            Save Changes
+                        </button>
+                        <button class="btn btn-secondary ms-2" @onclick="@(() => Nav.NavigateTo("/admin/users"))">Cancel</button>
+                    </div>
+                </EditForm>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? Id { get; set; }
+
+    [PersistentState] public InputModel? Model { get; set; }
+    [CascadingParameter] public Task<AuthenticationState> AuthenticationStateTask { get; set; }
+    private string _selectedRole = "";
+    private bool _loading = true;
+    private bool _isSubmitting;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id is null || !Guid.TryParse(Id, out var userId))
+        {
+            Nav.NavigateTo("/admin/users");
+            return;
+        }
+
+        try
+        {
+            if (Model == null)
+            {
+                UserDto? user = await AdminApi.GetUserAsync(userId);
+                if (user == null)
+                {
+                    Nav.NavigateTo("/admin/users");
+                    return;
+                }
+                
+                Model = new InputModel
+                {
+                    Email = user.Email,
+                    UserName = user.UserName,
+                    CycleOrder = user.CycleOrder
+                };
+            }
+
+            AuthenticationState state = await AuthenticationStateTask!;
+            _selectedRole = state.User.IsInRole("Admin") ? "Admin" : "Member";
+        }
+        catch (Exception)
+        {
+            // Handle error
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (Model is null || Id is null || !Guid.TryParse(Id, out var userId))
+            return;
+
+        _errorMessage = null;
+        _isSubmitting = true;
+
+        try
+        {
+            var request = new UpdateUserRequest
+            {
+                Email = Model.Email,
+                UserName = Model.UserName,
+                CycleOrder = Model.CycleOrder,
+                IsAdmin = _selectedRole == "Admin"
+            };
+
+            var result = await AdminApi.UpdateUserAsync(userId, request);
+
+            if (result.Success)
+            {
+                Nav.NavigateTo("/admin/users");
+            }
+            else
+            {
+                _errorMessage = result.ErrorMessage ?? "Failed to update user";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    public class InputModel
+    {
+        public string Email { get; set; } = "";
+        public string UserName { get; set; } = "";
+        public int CycleOrder { get; set; }
+    }
+}

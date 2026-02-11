@@ -1,0 +1,74 @@
+@page "/admin/users"
+@attribute [Authorize(Roles = "Admin")]
+@inject IAdminApiService AdminApi
+@inject NavigationManager Nav
+
+<PageTitle>Manage Users</PageTitle>
+
+<div class="m-5">
+
+    @if (UserList == null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <h3 class="text-2xl text-center mb-4">Manage Users</h3>
+        <div class="card bg-base-200 shadow-md">
+            <div class="card-body">
+                <div class="overflow-x-auto rounded-box border border-base-content/5 bg-base-100">
+                    <table class="table table-zebra">
+                        <thead>
+                        <tr>
+                            <th>Cycle Order</th>
+                            <th>Email</th>
+                            <th>Display Name</th>
+                            <th>Roles</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var user in UserList)
+                        {
+                            <tr>
+                                <td>@user.CycleOrder</td>
+                                <td>@user.Email</td>
+                                <td>@user.UserName</td>
+                                <td>@string.Join(", ", user.Roles)</td>
+                                <td>
+                                    <button class="btn btn-sm btn-secondary" @onclick="@(() => EditUser(user.Id))">Edit</button>
+                                    <a class="btn btn-sm btn-warning" href="@($"/Admin/ChangeUserPassword/{user.Id}")">Change Password</a>
+                                    <button class="btn btn-sm btn-danger" @onclick="@(() => DeleteUser(user.Id))">Delete</button>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-actions">
+                    <button class="btn btn-primary" @onclick="AddUser">Add User</button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [PersistentState] public List<UserDto>? UserList { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            UserList ??= await AdminApi.GetUsersAsync();
+        }
+        catch (Exception)
+        {
+            // Handle error
+        }
+    }
+
+    private void EditUser(Guid id) => Nav.NavigateTo($"/admin/users/edit/{id}");
+    private void AddUser() => Nav.NavigateTo("/admin/users/add");
+    private void DeleteUser(Guid id) => Nav.NavigateTo($"/admin/users/delete/{id}");
+}

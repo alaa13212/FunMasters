@@ -96,6 +96,7 @@ public class HltbService
                 MainStory = ConvertSecondsToHours(firstGame.CompMain),
                 MainPlusExtras = ConvertSecondsToHours(firstGame.CompPlus),
                 Completionist = ConvertSecondsToHours(firstGame.Comp100),
+                CountCompleted = firstGame.CountCompleted,
                 GameUrl = $"https://howlongtobeat.com/game/{firstGame.GameId}"
             };
         }
@@ -161,6 +162,7 @@ public class HltbGameResult
     public double MainPlusExtras { get; set; }
     public double Completionist { get; set; }
     public string GameUrl { get; set; }
+    public int CountCompleted { get; set; }
 
     public override string ToString()
     {
@@ -190,6 +192,7 @@ internal class GameData
     [JsonPropertyName("comp_all")] public int CompAll { get; set; }
 
     [JsonPropertyName("comp_100")] public int Comp100 { get; set; }
+    [JsonPropertyName("count_comp")] public int CountCompleted { get; set; }
 }
 
 internal class TokenClass

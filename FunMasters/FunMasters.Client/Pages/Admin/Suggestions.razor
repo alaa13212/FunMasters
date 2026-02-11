@@ -1,0 +1,171 @@
+@page "/admin/suggestions"
+@attribute [Authorize(Roles = "Admin")]
+@inject IAdminApiService AdminApi
+
+<PageTitle>Manage Suggestions</PageTitle>
+<div class="m-5">
+    @if (SuggestionModels == null)
+    {
+        <p>Loading...</p>
+    }
+    else
+    {
+        <h3 class="text-2xl text-center mb-4">Manage Suggestions</h3>
+        <div class="card bg-base-200 shadow-md">
+            <div class="card-body">
+                <button class="btn btn-lg btn-primary m-4" @onclick="Refresh" disabled="@_isRefreshing">
+                    @if (_isRefreshing)
+                    {
+                        <span class="loading loading-spinner"></span>
+                    }
+                    Refresh Queue
+                </button>
+                <div class="overflow-x-auto rounded-box border border-base-content/5 bg-base-100">
+                    <table class="table table-zebra">
+                        <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Suggested By</th>
+                            <th>Order</th>
+                            <th>Status</th>
+                            <th>Active</th>
+                            <th>Finish</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var s in SuggestionModels)
+                        {
+                            <tr>
+                                <td>@s.Suggestion.Title</td>
+                                <td>@s.Suggestion.SuggestedByUserName</td>
+                                <td>@s.Suggestion.Order</td>
+                                <td>
+                                    <select @bind="s.Status" class="form-select">
+                                        @foreach (SuggestionStatus status in Enum.GetValues(typeof(SuggestionStatus)))
+                                        {
+                                            <option value="@status">@status</option>
+                                        }
+                                    </select>
+                                </td>
+                                <td>
+                                    <InputDate @bind-Value="s.ActiveAtUtc" class="form-control"/>
+                                </td>
+                                <td>
+                                    <InputDate @bind-Value="s.FinishedAtUtc" class="form-control"/>
+                                </td>
+                                <td>
+                                    <button class="btn btn-primary btn-sm" @onclick="() => Save(s)" disabled="@s.IsSaving">
+                                        @if (s.IsSaving)
+                                        {
+                                            <span class="loading loading-spinner loading-xs"></span>
+                                        }
+                                        Save
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    }
+</div>
+
+
+@code {
+    [PersistentState] public List<SuggestionModel>? SuggestionModels { get; set; }
+    private bool _isRefreshing;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            SuggestionModels ??= (await AdminApi.GetAllSuggestionsAsync()).Select(s => new SuggestionModel(s)).ToList();
+        }
+        catch (Exception)
+        {
+            // Handle error
+        }
+    }
+
+    private async Task Save(SuggestionModel model)
+    {
+        model.IsSaving = true;
+
+        try
+        {
+            var activeAtUtc = model.ActiveAtUtc;
+            var finishedAtUtc = model.FinishedAtUtc;
+
+            // Adjust timezone if needed (set to -3 hours as in original)
+            if (activeAtUtc.HasValue && activeAtUtc.Value.TimeOfDay != TimeSpan.FromHours(24 - 3))
+                activeAtUtc = activeAtUtc.Value.Date.AddHours(-3);
+
+            if (finishedAtUtc.HasValue && finishedAtUtc.Value.TimeOfDay != TimeSpan.FromHours(24 - 3))
+                finishedAtUtc = finishedAtUtc.Value.Date.AddHours(-3);
+
+            var request = new AdminUpdateSuggestionRequest
+            {
+                Status = model.Status,
+                ActiveAtUtc = activeAtUtc,
+                FinishedAtUtc = finishedAtUtc,
+                CycleNumber = model.Suggestion.CycleNumber
+            };
+
+            await AdminApi.UpdateSuggestionAsync(model.Suggestion.Id, request);
+            SuggestionModels = (await AdminApi.GetAllSuggestionsAsync()).Select(s => new SuggestionModel(s)).ToList();
+            
+        }
+        catch (Exception)
+        {
+            // Handle error
+        }
+        finally
+        {
+            model.IsSaving = false;
+        }
+    }
+
+    private async Task Refresh()
+    {
+        _isRefreshing = true;
+
+        try
+        {
+            await AdminApi.RefreshQueueAsync();
+            // Reload suggestions
+            SuggestionModels = (await AdminApi.GetAllSuggestionsAsync()).Select(s => new SuggestionModel(s)).ToList();
+        }
+        catch (Exception)
+        {
+            // Handle error
+        }
+        finally
+        {
+            _isRefreshing = false;
+        }
+    }
+
+    [Serializable]
+    public class SuggestionModel
+    {
+        public SuggestionDto Suggestion { get; set; } = null!;
+        public SuggestionStatus Status { get; set; }
+        public DateTime? ActiveAtUtc { get; set; }
+        public DateTime? FinishedAtUtc { get; set; }
+        public bool IsSaving { get; set; }
+
+        public SuggestionModel(){}
+        public SuggestionModel(SuggestionDto suggestion)
+        {
+            Suggestion = suggestion;
+            Status = suggestion.Status;
+            ActiveAtUtc = suggestion.ActiveAtUtc;
+            FinishedAtUtc = suggestion.FinishedAtUtc;
+        }
+    }
+
+}

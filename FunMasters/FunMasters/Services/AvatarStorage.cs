@@ -2,7 +2,7 @@
 
 namespace FunMasters.Services;
 
-public class AvatarStorage(IWebHostEnvironment env, HttpClient http)
+public class AvatarStorage(IWebHostEnvironment env)
 {
     private static readonly Dictionary<Guid, DateTime> Cache = new();
 
@@ -12,7 +12,7 @@ public class AvatarStorage(IWebHostEnvironment env, HttpClient http)
     public string GetPublicUrl(Guid userId)
         => $"/uploads/avatars/{userId:n}?{GetFileTimestamp(userId)}";
 
-    private string GetFileTimestamp(Guid userId)
+    public string GetFileTimestamp(Guid userId)
     {
         return Cache.GetOrSet(userId, key => File.GetLastWriteTimeUtc(GetFilePath(key))).Ticks.ToString();
     }
