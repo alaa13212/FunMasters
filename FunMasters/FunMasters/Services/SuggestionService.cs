@@ -53,17 +53,36 @@ public class SuggestionService(
         int maxCycleOrder = suggestions
             .Select(s => s.SuggestedBy)
             .Distinct()
-            .Select(u => u!.CycleOrder)
-            .DefaultIfEmpty(0)
-            .Max();
+            .Max(u => u!.CycleOrder);
 
-        // Sort by cycle order starting from cycleStart
-        var sorted = suggestions
-            .OrderBy(s => (s.SuggestedBy!.CycleOrder - cycleStart + maxCycleOrder + 1) % (maxCycleOrder + 1))
-            .ThenBy(s => s.Order)
+        var suggestionsByUser = suggestions
+            .GroupBy(s => s.SuggestedById)
+            .Select(g => new
+            {
+                UserId = g.Key,
+                User = g.First().SuggestedBy,
+                Suggestions = g.ToList()
+            })
+            .OrderBy(x => x.User!.CycleOrder > cycleStart ? x.User!.CycleOrder - cycleStart : maxCycleOrder + x.User!.CycleOrder - cycleStart)
             .ToList();
 
-        return sorted.Select(MapToDto).ToList();
+        List<Suggestion> finalSort = [];
+        do
+        {
+            foreach (var userSuggestion in suggestionsByUser)
+            {
+                Suggestion? suggestion = userSuggestion.Suggestions.MinBy(s => s.Order);
+                if (suggestion != null)
+                {
+                    finalSort.Add(suggestion);
+                    userSuggestion.Suggestions.Remove(suggestion);
+                }
+            }
+            
+            suggestionsByUser.RemoveAll(group => group.Suggestions.Count == 0);
+        } while (suggestionsByUser.Any());
+
+        return finalSort.Select(MapToDto).ToList();
     }
 
     public async Task<SuggestionDetailDto?> GetSuggestionDetailsAsync(Guid id)
