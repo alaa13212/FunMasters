@@ -34,8 +34,11 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(options => options.Us
 builder.Services.AddScoped<ApplicationDbContext>(sp =>
     sp.GetRequiredService<IDbContextFactory<ApplicationDbContext>>().CreateDbContext());
 
-builder.Services.AddResponseCompression()
-    .AddRequestDecompression();
+if (builder.Environment.IsProduction())
+{
+    builder.Services.AddResponseCompression();
+    builder.Services.AddRequestDecompression();
+}
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -110,14 +113,15 @@ else
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
+    
+    app.UseResponseCompression();
+    app.UseRequestDecompression();
 }
 
 // Create a file provider with change monitoring enabled
 var uploadsPath = Path.Combine(app.Environment.WebRootPath, "uploads");
 var fileProvider = new PhysicalFileProvider(uploadsPath);
 
-app.UseResponseCompression();
-app.UseRequestDecompression();
 
 // Serve static files from /uploads/avatars
 app.UseStaticFiles(new StaticFileOptions
