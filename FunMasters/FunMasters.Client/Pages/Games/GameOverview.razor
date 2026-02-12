@@ -104,7 +104,7 @@
                 <div class="text-5xl my-6">Reviews</div>
                 <div class="card bg-base-200 shadow-md m-auto w-full @("@container")">
                     <div class="card-body">
-                         @if (_canRate)
+                        @if (_canRate)
                         {
                             <div class="divider text-2xl">Finished Playing? - Rate this game</div>
                             <div class="max-w-[650px] w-full mx-auto">
@@ -229,7 +229,7 @@
                     .Select(r => new GameRatingViewModel(r, hasNoRatings || (_myId == null && Game.Suggestion.Status == SuggestionStatus.Active)))
                     .ToList();
 
-                _canRate = hasNoRatings;
+                _canRate = hasNoRatings && Game.Suggestion.Status is SuggestionStatus.Active or SuggestionStatus.Finished;
                 if (_canRate)
                     _ratingRecord = new RatingRecord();
 
