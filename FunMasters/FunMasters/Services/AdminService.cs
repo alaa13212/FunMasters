@@ -239,7 +239,6 @@ public class AdminService(
         suggestion.CycleNumber = request.CycleNumber;
 
         await db.SaveChangesAsync();
-        await queueManager.UpdateQueueAsync();
 
         return ApiResult.Ok();
     }

@@ -1,6 +1,5 @@
 @page "/my-games/edit/{Id:guid}"
 @attribute [Authorize]
-@implements IDisposable
 
 @inject ISuggestionApiService SuggestionApi
 @inject IIgdbApiService IgdbApi
@@ -111,18 +110,13 @@
 
     private bool _isLoadingCovers;
 
-    private CancellationTokenSource? _cts;
-    protected CancellationToken CancellationToken => _cts?.Token ?? CancellationToken.None;
-
     private readonly List<IgdbGameDto> _suggestedCoverArts = [];
 
     protected override async Task OnInitializedAsync()
     {
-        StartOperation();
-
         try
         {
-            if (Model == null)
+            if (Model != null)
                 return;
             
             // Get user's suggestions and find this one
@@ -151,8 +145,6 @@
 
     private async Task HandleSave()
     {
-        StartOperation();
-
         if (Model == null) return;
 
         _errorMessage = null;
@@ -195,7 +187,6 @@
         if (string.IsNullOrWhiteSpace(Model?.Title))
             return;
 
-        StartOperation();
         _isLoadingCovers = true;
         _suggestedCoverArts.Clear();
 
@@ -220,27 +211,6 @@
         Model!.CoverArtUrl = game.CoverUrl;
         Model.SteamLink = game.SteamUrl;
         Model.Title = game.Name;
-    }
-
-    private void StartOperation()
-    {
-        if (_cts != null)
-        {
-            _cts.Cancel();
-            _cts.Dispose();
-        }
-        _cts = new CancellationTokenSource();
-    }
-
-    public void Dispose()
-    {
-        GC.SuppressFinalize(this);
-        if (_cts != null)
-        {
-            _cts.Cancel();
-            _cts.Dispose();
-            _cts = null;
-        }
     }
 
     public class InputModel
