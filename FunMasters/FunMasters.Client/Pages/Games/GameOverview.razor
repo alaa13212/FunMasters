@@ -18,7 +18,7 @@
         <PageTitle>@Game.Suggestion.Title</PageTitle>
         <div class="flex items-start flex-col lg:flex-row gap-5">
             <div class="card bg-base-200 shadow-md flex-none w-full lg:w-128 @("@container")">
-                <figure class="max-h-[340px] hover:max-h-[700px] transition-all duration-300">
+                <figure class="max-h-[340px] hover:max-h-[700px] can-hover:max-h-[700px] transition-all duration-300">
                     <img src="@Game.Suggestion.CoverImageUrl" alt="@Game.Suggestion.Title" class="w-full"/>
                 </figure>
                 <div class="card-body">
@@ -147,22 +147,20 @@
                         {
                             <span class="text-center text-xl">No reviews yet</span>
                         }
-                        <div class="grid grid-cols-1 md:grid-cols-fill-[450px] gap-5">
+                        <div class="columns-[450px] gap-5">
                             @foreach (var ratingModel in _ratingViewModels)
                             {
                                 var rating = ratingModel.Rating;
-                                <div class="flex flex-col transition-all duration-300">
+                                <div class="flex flex-col transition-all duration-300 mb-5 break-inside-avoid">
                                     <div class="flex flex-row">
                                         <img src="@rating.RaterAvatarUrl" class="me-2 w-25 h-25 mask mask-squircle"/>
                                         <div class="flex flex-col gap-2">
                                             <h5 class="text-xl underline">@rating.RaterUserName</h5>
                                             <RatingStars Rating="@rating.DecimalScore" class="text-3xl"/>
-                                            <p class="whitespace-pre-line">@rating.DecimalScore/10 @rating.RatingLabel.
-                                                <span class="spoiler-text @(ratingModel.IsSpoiler ? "spoiler-on" : "")"
-                                                      @onclick="() => ratingModel.IsSpoiler = false">
-                                                    @rating.Comment
-                                                </span>
-                                            </p>
+                                            <span class="spoiler-text @(ratingModel.IsSpoiler ? "spoiler-on" : "")"@onclick="() => ratingModel.IsSpoiler = false">
+                                                @rating.DecimalScore/10 @rating.RatingLabel.<br/>
+                                                <CollapsibleReview Review="@rating.Comment"/>
+                                            </span>
                                         </div>
                                     </div>
 

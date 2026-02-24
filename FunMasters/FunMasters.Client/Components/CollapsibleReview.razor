@@ -1,0 +1,38 @@
+﻿@using System.Text.RegularExpressions
+<div class="relative">
+    <span class="whitespace-pre-line">@Preview</span>
+    
+    @if(ShouldTruncate)
+    {
+        <button @onclick="Toggle" class="btn btn-link block p-0 -mt-1">
+            @(Expanded ? "Read Less" : $"Read More ({MoreWordsCount} words)")
+        </button>
+    }
+</div>
+
+@code {
+    private const int PreviewLength = 500;
+    private const int ThresholdLength = 750;
+    
+    [Parameter, EditorRequired] public required string Review { get; set; }
+    private bool Expanded;
+
+    private bool ShouldTruncate => Review.Length > ThresholdLength;
+    private int MoreWordsCount => ShouldTruncate ? WordCount(Review[PreviewLength..]) : 0;
+    
+    private string Preview =>
+        Expanded || !ShouldTruncate
+            ? Review
+            : Review[..PreviewLength] + "…";
+
+
+    private void Toggle() => Expanded = !Expanded;
+    
+    public static int WordCount(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return 0;
+
+        return Regex.Matches(text, @"\b\w+\b").Count;
+    }
+}
