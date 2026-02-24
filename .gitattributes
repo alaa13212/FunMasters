@@ -1,0 +1,2 @@
+﻿# Default: text files use LF and UTF-8 without BOM
+* text=auto eol=lf working-tree-encoding=UTF-8
