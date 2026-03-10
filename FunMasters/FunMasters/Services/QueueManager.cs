@@ -16,7 +16,7 @@ public class QueueManager(ApplicationDbContext db)
             .FirstOrDefaultAsync(s => s.Status == SuggestionStatus.Active);
 
         // Check if active game expired
-        if (active is { FinishedAtUtc: not null } && now > active.FinishedAtUtc)
+        if (active is { FinishedAtUtc: not null } && now.ToLocalTime().Date >= active.FinishedAtUtc.Value.ToLocalTime().Date)
         {
             active.Status = SuggestionStatus.Finished;
         }
@@ -24,11 +24,8 @@ public class QueueManager(ApplicationDbContext db)
         // If there’s no active game, promote next one
         if (!await db.Suggestions.AnyAsync(s => s.Status == SuggestionStatus.Active))
         {
-            var next = await GetNextSuggestionAsync();
-            if (next != null)
-            {
-                next.Status = SuggestionStatus.Active;
-            }
+            Suggestion? next = await GetNextSuggestionAsync();
+            next?.Status = SuggestionStatus.Active;
         }
         await db.SaveChangesAsync();
 

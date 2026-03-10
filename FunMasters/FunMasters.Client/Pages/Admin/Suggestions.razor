@@ -41,7 +41,7 @@
                                 <td>@s.Suggestion.SuggestedByUserName</td>
                                 <td>@s.Suggestion.Order</td>
                                 <td>
-                                    <select @bind="s.Status" class="form-select">
+                                    <select @bind="s.Status" class="select">
                                         @foreach (SuggestionStatus status in Enum.GetValues(typeof(SuggestionStatus)))
                                         {
                                             <option value="@status">@status</option>
@@ -97,21 +97,14 @@
 
         try
         {
-            var activeAtUtc = model.ActiveAtUtc;
-            var finishedAtUtc = model.FinishedAtUtc;
-
-            // Adjust timezone if needed (set to -3 hours as in original)
-            if (activeAtUtc.HasValue && activeAtUtc.Value.TimeOfDay != TimeSpan.FromHours(24 - 3))
-                activeAtUtc = activeAtUtc.Value.Date.AddHours(-3);
-
-            if (finishedAtUtc.HasValue && finishedAtUtc.Value.TimeOfDay != TimeSpan.FromHours(24 - 3))
-                finishedAtUtc = finishedAtUtc.Value.Date.AddHours(-3);
+            model.ActiveAtUtc = model.ActiveAtUtc?.Date.ToUniversalTime();
+            model.FinishedAtUtc = model.FinishedAtUtc?.Date.ToUniversalTime();
 
             var request = new AdminUpdateSuggestionRequest
             {
                 Status = model.Status,
-                ActiveAtUtc = activeAtUtc,
-                FinishedAtUtc = finishedAtUtc,
+                ActiveAtUtc = model.ActiveAtUtc,
+                FinishedAtUtc = model.FinishedAtUtc,
                 CycleNumber = model.Suggestion.CycleNumber
             };
 

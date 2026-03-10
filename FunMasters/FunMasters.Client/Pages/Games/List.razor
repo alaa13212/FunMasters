@@ -100,7 +100,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadGames();
+        if(UserSuggestions == null)
+            await LoadGames();
     }
 
     private async Task LoadGames()
@@ -109,7 +110,7 @@
 
         try
         {
-            UserSuggestions ??= await SuggestionApi.GetMySuggestionsAsync();
+            UserSuggestions = await SuggestionApi.GetMySuggestionsAsync();
         }
         catch (Exception)
         {
