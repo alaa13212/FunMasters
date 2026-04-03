@@ -159,7 +159,10 @@
                                             <RatingStars Rating="@rating.DecimalScore" class="text-3xl"/>
                                             <span class="spoiler-text @(ratingModel.IsSpoiler ? "spoiler-on" : "")"@onclick="() => ratingModel.IsSpoiler = false">
                                                 @rating.DecimalScore/10 @rating.RatingLabel.<br/>
-                                                <CollapsibleReview Review="@rating.Comment"/>
+                                                @if(!string.IsNullOrWhiteSpace(rating.Comment))
+                                                {
+                                                    <CollapsibleReview Review="@rating.Comment"/>
+                                                }
                                             </span>
                                         </div>
                                     </div>
