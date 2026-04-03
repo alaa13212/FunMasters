@@ -1,4 +1,6 @@
-﻿namespace FunMasters.Services;
+﻿using System.Text.Json.Nodes;
+
+namespace FunMasters.Services;
 
 using System;
 using System.Collections.Generic;
@@ -11,68 +13,88 @@ using System.Threading.Tasks;
 public class HltbService
 {
     private readonly HttpClient _httpClient;
-    private const string ApiUrl = "https://howlongtobeat.com/api/finder";
-    private string? _cachedToken;
+    private const string ApiUrl = "https://howlongtobeat.com/api/find";
+    private TokenClass? _cachedToken;
     private DateTime _tokenExpiry = DateTime.MinValue;
 
     public HltbService(HttpClient httpClient)
     {
         _httpClient = httpClient;
         _httpClient.DefaultRequestHeaders.Clear();
-        _httpClient.DefaultRequestHeaders.Add("User-Agent",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+        _httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
         _httpClient.DefaultRequestHeaders.Add("Accept", "*/*");
         _httpClient.DefaultRequestHeaders.Add("Referer", "https://howlongtobeat.com/");
     }
 
-    public async Task<HltbGameResult?> SearchGameAsync(string gameName, string? authToken = null)
+    public async Task<HltbGameResult?> SearchGameAsync(string gameName)
     {
         if (string.IsNullOrWhiteSpace(gameName))
             throw new ArgumentException("Game name cannot be empty", nameof(gameName));
 
-        // If no token provided, try to get one from the main page
-        var searchPayload = new
+        var searchPayload = new JsonObject
         {
-            searchType = "games",
-            searchTerms = gameName.Split(' ').Where(IsWord).ToArray(),
-            searchPage = 1,
-            size = 20,
-            searchOptions = new
+            ["searchType"] = "games",
+            ["searchTerms"] = new JsonArray(
+                gameName.Split(' ').Where(IsWord).Select(x => (JsonNode)x).ToArray()
+            ),
+            ["searchPage"] = 1,
+            ["size"] = 20,
+            ["searchOptions"] = new JsonObject
             {
-                games = new
+                ["games"] = new JsonObject
                 {
-                    userId = 0,
-                    platform = "",
-                    sortCategory = "popular",
-                    rangeCategory = "main",
-                    rangeTime = new { min = (int?)null, max = (int?)null },
-                    gameplay = new { perspective = "", flow = "", genre = "", difficulty = "" },
-                    rangeYear = new { min = "", max = "" },
-                    modifier = ""
+                    ["userId"] = 0,
+                    ["platform"] = "",
+                    ["sortCategory"] = "popular",
+                    ["rangeCategory"] = "main",
+                    ["rangeTime"] = new JsonObject
+                    {
+                        ["min"] = null,
+                        ["max"] = null
+                    },
+                    ["gameplay"] = new JsonObject
+                    {
+                        ["perspective"] = "",
+                        ["flow"] = "",
+                        ["genre"] = "",
+                        ["difficulty"] = ""
+                    },
+                    ["rangeYear"] = new JsonObject
+                    {
+                        ["min"] = "",
+                        ["max"] = ""
+                    },
+                    ["modifier"] = ""
                 },
-                users = new { sortCategory = "postcount" },
-                lists = new { sortCategory = "follows" },
-                filter = "",
-                sort = 0,
-                randomizer = 0
+                ["users"] = new JsonObject
+                {
+                    ["sortCategory"] = "postcount"
+                },
+                ["lists"] = new JsonObject
+                {
+                    ["sortCategory"] = "follows"
+                },
+                ["filter"] = "",
+                ["sort"] = 0,
+                ["randomizer"] = 0
             },
-            useCache = true
+            ["useCache"] = true
         };
-
-        var jsonPayload = JsonSerializer.Serialize(searchPayload);
-        var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
         try
         {
-            if (string.IsNullOrWhiteSpace(authToken))
-            {
-                authToken = await GetAuthTokenAsync();
-            }
+            TokenClass authToken = await GetAuthTokenAsync();
 
             using var request = new HttpRequestMessage(HttpMethod.Post, ApiUrl);
-            request.Content = content;
-            request.Headers.Add("x-auth-token", authToken);
+            request.Headers.Add("x-auth-token", authToken.Token);
+            request.Headers.Add("x-hp-key", authToken.HpKey);
+            request.Headers.Add("x-hp-val", authToken.HpValue);
 
+            searchPayload[authToken.HpKey] = authToken.HpValue;
+            
+            string jsonPayload = searchPayload.ToJsonString();
+            request.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+            
             var response = await _httpClient.SendAsync(request);
 
             if (!response.IsSuccessStatusCode)
@@ -106,10 +128,10 @@ public class HltbService
         }
     }
 
-    private async Task<string> GetAuthTokenAsync()
+    private async Task<TokenClass> GetAuthTokenAsync()
     {
-        // Return cached token if still valid (valid for 1 hour)
-        if (!string.IsNullOrEmpty(_cachedToken) && DateTime.UtcNow < _tokenExpiry)
+        // Return cached token if still valid (valid for 24 hour)
+        if (_cachedToken != null && DateTime.UtcNow < _tokenExpiry)
         {
             return _cachedToken;
         }
@@ -127,7 +149,7 @@ public class HltbService
 
             if (token != null)
             {
-                _cachedToken = token.Token;
+                _cachedToken = token;
                 _tokenExpiry = DateTime.UtcNow.AddHours(24);
                 return _cachedToken;
             }
@@ -198,4 +220,6 @@ internal class GameData
 internal class TokenClass
 {
     [JsonPropertyName("token")] public string Token { get; set; }
+    [JsonPropertyName("hpKey")] public string HpKey { get; set; }
+    [JsonPropertyName("hpVal")] public string HpValue { get; set; }
 }
