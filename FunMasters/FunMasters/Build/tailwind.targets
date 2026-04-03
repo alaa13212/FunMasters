@@ -1,12 +1,6 @@
 ﻿<Project>
-    <PropertyGroup>
-        <!-- Disable Tailwind when building inside Docker -->
-        <RunTailwind Condition="'$(DOTNET_RUNNING_IN_CONTAINER)' == 'true'">false</RunTailwind>
-    </PropertyGroup>
-    
     <!-- Make sure Tailwind CLI exists -->
-    <Target Name="EnsureTailwind" BeforeTargets="Build"
-            Condition="'$(RunTailwind)' != 'false'">
+    <Target Name="EnsureTailwind" BeforeTargets="Build">
         <Message Text="Checking Tailwind CLI..." Importance="high" />
 
         <!-- Windows -->
@@ -19,7 +13,7 @@
     </Target>
 
     <!-- Build Tailwind when building the project -->
-    <Target Name="BuildTailwind" AfterTargets="EnsureTailwind" BeforeTargets="Build" Condition="'$(Configuration)' == 'Release' AND '$(RunTailwind)' != 'false'">
+    <Target Name="BuildTailwind" AfterTargets="EnsureTailwind" BeforeTargets="BeforeBuild">
         <Message Text="Running Tailwind production build..." Importance="high" />
 
         <!-- Windows -->
@@ -29,6 +23,11 @@
         <!-- Linux/Mac -->
         <Exec Command="Tools/tailwindcss -i Styles/input.css -o wwwroot/css/site.css --minify"
               Condition="'$(OS)' != 'Windows_NT'" />
+
+        <ItemGroup>
+            <Content Remove="wwwroot\css\site.css" />
+            <Content Include="wwwroot\css\site.css" CopyToPublishDirectory="PreserveNewest" />
+        </ItemGroup>
     </Target>
 
 </Project>
