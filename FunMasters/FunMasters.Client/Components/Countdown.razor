@@ -40,7 +40,7 @@
     private string RootClass =>
         AdditionalAttributes != null &&
         AdditionalAttributes.TryGetValue("class", out var cls)
-            ? cls?.ToString() ?? ""
+            ? cls.ToString() ?? ""
             : "";
     
     private int _days;

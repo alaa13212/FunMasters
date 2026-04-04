@@ -39,7 +39,7 @@ public class RatingService(
         var userId = GetCurrentUserId();
         var ratings = await db.Ratings
             .Include(r => r.Suggestion)
-            .ThenInclude(s => s.SuggestedBy)
+            .ThenInclude(s => s!.SuggestedBy)
             .Where(r => r.RaterId == userId)
             .OrderByDescending(r => r.CreatedAtUtc)
             .ToListAsync();

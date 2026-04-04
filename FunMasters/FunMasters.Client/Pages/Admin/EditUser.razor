@@ -106,7 +106,7 @@
                 };
             }
 
-            AuthenticationState state = await AuthenticationStateTask!;
+            AuthenticationState state = await AuthenticationStateTask;
             _selectedRole = state.User.IsInRole("Admin") ? "Admin" : "Member";
         }
         catch (Exception)

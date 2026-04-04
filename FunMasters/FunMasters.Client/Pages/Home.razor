@@ -11,7 +11,7 @@
     }
     else
     {
-        @if (HomeData.ActiveSuggestion != null)
+        @if (HomeData!.ActiveSuggestion != null)
         {
             <div class="card md:card-side bg-base-200 shadow-2xl max-w-[1000px] m-auto card-hover">
                 <figure>
@@ -177,12 +177,12 @@
     {
         return _sortBy switch
         {
-            SortingCriteria.FinishDateDescending => HomeData.FinishedSuggestions.OrderByDescending(g => g.FinishedAtUtc),
-            SortingCriteria.FinishDateAscending => HomeData.FinishedSuggestions.OrderBy(g => g.FinishedAtUtc),
-            SortingCriteria.RatingDescending => HomeData.FinishedSuggestions.OrderByDescending(g => g.AverageRating ?? 0),
-            SortingCriteria.RatingAscending => HomeData.FinishedSuggestions.OrderBy(g => g.AverageRating ?? 0),
-            SortingCriteria.Suggester => HomeData.FinishedSuggestions.OrderBy(g => g.SuggestedByUserName ?? ""),
-            _ => HomeData.FinishedSuggestions.OrderByDescending(g => g.FinishedAtUtc)
+            SortingCriteria.FinishDateDescending => HomeData!.FinishedSuggestions.OrderByDescending(g => g.FinishedAtUtc),
+            SortingCriteria.FinishDateAscending => HomeData!.FinishedSuggestions.OrderBy(g => g.FinishedAtUtc),
+            SortingCriteria.RatingDescending => HomeData!.FinishedSuggestions.OrderByDescending(g => g.AverageRating ?? 0),
+            SortingCriteria.RatingAscending => HomeData!.FinishedSuggestions.OrderBy(g => g.AverageRating ?? 0),
+            SortingCriteria.Suggester => HomeData!.FinishedSuggestions.OrderBy(g => g.SuggestedByUserName),
+            _ => HomeData!.FinishedSuggestions.OrderByDescending(g => g.FinishedAtUtc)
         };
     }
 

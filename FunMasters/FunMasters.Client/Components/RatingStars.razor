@@ -14,7 +14,7 @@
     private string RootClass =>
         AdditionalAttributes != null &&
         AdditionalAttributes.TryGetValue("class", out object? cls)
-            ? cls?.ToString() ?? ""
+            ? cls.ToString() ?? ""
             : "";
 
 }

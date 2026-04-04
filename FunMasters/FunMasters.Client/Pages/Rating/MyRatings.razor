@@ -76,7 +76,7 @@
             NeedsRating ??= (await RatingApi.GetUnratedSuggestionsAsync()).Select(s => new NeedRatingModel(s)).ToList();
             RatingsModel ??= (await RatingApi.GetMyRatingsAsync()).Select(r => new RatingModel(r)).ToList();
         }
-        catch (Exception e)
+        catch (Exception)
         {
             // Handle error
         }

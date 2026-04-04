@@ -25,7 +25,6 @@ public class GameCoverStorage(IWebHostEnvironment env, HttpClient http)
         var dir = Path.Combine(env.WebRootPath, "uploads", "gamecovers");
         Directory.CreateDirectory(dir);
         
-        var fileName = $"{gameId:n}";
         var filePath = GetFilePath(gameId);
 
         if (!sourceUrl.Contains("https:"))
