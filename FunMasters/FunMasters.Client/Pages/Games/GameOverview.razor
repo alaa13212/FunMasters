@@ -133,7 +133,7 @@
                                             @if (rating.PlaytimeForeverMinutes.HasValue || rating.Playtime2WeeksMinutes.HasValue)
                                             {
                                                 <a href="@rating.RaterSteamProfileUrl" target="_blank" rel="noopener noreferrer"
-                                                   class="text-sm opacity-70 hover:opacity-100 flex items-center gap-1 w-fit @(rating.RaterSteamProfileUrl == null ? "pointer-events-none" : "")">
+                                                   class="text-sm opacity-70 hover:opacity-100 flex items-center gap-1 w-fit @(rating.RaterSteamProfileUrl == null ? "pointer-events-none" : "") @(rating.PlaytimeForeverMinutes < 60 ? "text-warning" : "")">
                                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                         <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                                                     </svg>
@@ -163,7 +163,7 @@
                                 @foreach (var pt in Game.NonReviewerPlaytimes)
                                 {
                                     <a href="@pt.SteamProfileUrl" target="_blank" rel="noopener noreferrer"
-                                       class="flex items-center gap-2 bg-base-300 rounded-lg px-3 py-2 hover:bg-base-300/50 transition-colors @(pt.SteamProfileUrl == null ? "pointer-events-none" : "")">
+                                       class="flex items-center gap-2 bg-base-300 rounded-lg px-3 py-2 hover:bg-base-300/50 transition-colors @(pt.SteamProfileUrl == null ? "pointer-events-none" : "") @(pt.PlaytimeForeverMinutes < 60 ? "text-warning" : "")">
                                         <img src="@pt.AvatarUrl" class="w-8 h-8 mask mask-squircle"/>
                                         <div class="flex flex-col">
                                             <span class="text-sm font-semibold">@pt.UserName</span>
