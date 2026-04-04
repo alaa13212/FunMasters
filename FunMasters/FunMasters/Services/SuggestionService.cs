@@ -12,6 +12,7 @@ public class SuggestionService(
     GameCoverStorage coverStorage,
     AvatarStorage avatarStorage,
     QueueManager queueManager,
+    SteamPlaytimeService steamPlaytimeService,
     IHttpContextAccessor httpContextAccessor) : ISuggestionApiService
 {
     public async Task<HomePageDto> GetHomeDataAsync()
@@ -93,7 +94,9 @@ public class SuggestionService(
             .ThenInclude(r => r.Rater)
             .FirstOrDefaultAsync(s => s.Id == id);
 
-        return suggestion != null ? MapToDetailDto(suggestion) : null;
+        if (suggestion == null) return null;
+        var playtimes = await steamPlaytimeService.GetPlaytimesForSuggestionAsync(id);
+        return MapToDetailDto(suggestion, playtimes);
     }
 
     public async Task<SuggestionDetailDto?> GetActiveSuggestionAsync()
@@ -104,7 +107,9 @@ public class SuggestionService(
             .ThenInclude(r => r.Rater)
             .FirstOrDefaultAsync(s => s.Status == SuggestionStatus.Active);
 
-        return suggestion != null ? MapToDetailDto(suggestion) : null;
+        if (suggestion == null) return null;
+        var playtimes = await steamPlaytimeService.GetPlaytimesForSuggestionAsync(suggestion.Id);
+        return MapToDetailDto(suggestion, playtimes);
     }
 
     public async Task<List<SuggestionDto>> GetMySuggestionsAsync()
@@ -325,29 +330,43 @@ public class SuggestionService(
         };
     }
 
-    private SuggestionDetailDto MapToDetailDto(Suggestion suggestion)
+    private SuggestionDetailDto MapToDetailDto(Suggestion suggestion, List<SteamPlaytimeDto> playtimes)
     {
+        var playtimeByUser = playtimes.ToDictionary(p => p.UserId);
+
         // Sort ratings: those with comments first, then by creation date
         var sortedRatings = suggestion.Ratings
             .OrderByDescending(r => string.IsNullOrWhiteSpace(r.Comment) ? -1 : Math.Clamp(r.Comment?.Length ?? 0, 0, 1))
             .ThenBy(r => r.CreatedAtUtc)
             .ToList();
 
+        var raterIds = sortedRatings.Select(r => r.RaterId).ToHashSet();
+
         return new SuggestionDetailDto
         {
             Suggestion = MapToDto(suggestion),
-            Ratings = sortedRatings.Select(r => new RatingDto
+            Ratings = sortedRatings.Select(r =>
             {
-                Id = r.Id,
-                SuggestionId = r.SuggestionId,
-                RaterId = r.RaterId,
-                RaterUserName = r.Rater?.UserName ?? "",
-                RaterAvatarUrl = avatarStorage.GetPublicUrl(r.RaterId),
-                Score = r.Score,
-                Comment = r.Comment,
-                CreatedAtUtc = r.CreatedAtUtc,
-                RatingLabel = RatingUtils.GetRatingLabel(r.Score)
-            }).ToList()
+                playtimeByUser.TryGetValue(r.RaterId, out var pt);
+                return new RatingDto
+                {
+                    Id = r.Id,
+                    SuggestionId = r.SuggestionId,
+                    RaterId = r.RaterId,
+                    RaterUserName = r.Rater?.UserName ?? "",
+                    RaterAvatarUrl = avatarStorage.GetPublicUrl(r.RaterId),
+                    Score = r.Score,
+                    Comment = r.Comment,
+                    CreatedAtUtc = r.CreatedAtUtc,
+                    RatingLabel = RatingUtils.GetRatingLabel(r.Score),
+                    RaterSteamId = r.Rater?.SteamId,
+                    PlaytimeForeverMinutes = pt?.PlaytimeForeverMinutes,
+                    Playtime2WeeksMinutes = pt?.Playtime2WeeksMinutes
+                };
+            }).ToList(),
+            NonReviewerPlaytimes = playtimes
+                .Where(p => !raterIds.Contains(p.UserId))
+                .ToList()
         };
     }
 

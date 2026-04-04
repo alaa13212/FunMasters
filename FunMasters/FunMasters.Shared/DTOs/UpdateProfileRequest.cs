@@ -4,4 +4,5 @@ public class UpdateProfileRequest
 {
     public string Email { get; set; } = null!;
     public string UserName { get; set; } = null!;
+    public string? SteamId { get; set; }
 }

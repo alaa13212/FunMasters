@@ -74,7 +74,8 @@ public class AccountService(
             Id = user.Id,
             Email = user.Email!,
             UserName = user.UserName!,
-            AvatarUrl = avatarStorage.GetPublicUrl(user.Id)
+            AvatarUrl = avatarStorage.GetPublicUrl(user.Id),
+            SteamId = user.SteamId
         };
     }
 
@@ -100,9 +101,14 @@ public class AccountService(
         if (existingUser != null && existingUser.Id != userId)
             return ApiResult.Fail("Username is already in use");
 
+        if (!string.IsNullOrWhiteSpace(request.SteamId) &&
+            !System.Text.RegularExpressions.Regex.IsMatch(request.SteamId, @"^\d{17}$"))
+            return ApiResult.Fail("Invalid Steam ID format. Please use the Verify button to look up your Steam ID.");
+
         // Update user
         user.Email = request.Email;
         user.UserName = request.UserName;
+        user.SteamId = string.IsNullOrWhiteSpace(request.SteamId) ? null : request.SteamId;
 
         var result = await userManager.UpdateAsync(user);
         if (!result.Succeeded)

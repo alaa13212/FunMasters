@@ -4,4 +4,5 @@ public class SuggestionDetailDto
 {
     public SuggestionDto Suggestion { get; set; } = null!;
     public List<RatingDto> Ratings { get; set; } = [];
+    public List<SteamPlaytimeDto> NonReviewerPlaytimes { get; set; } = [];
 }

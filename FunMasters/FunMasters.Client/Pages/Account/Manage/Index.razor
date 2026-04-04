@@ -1,6 +1,7 @@
 @page "/Account/Manage"
 
 @inject IAccountApiService AccountApi
+@inject ISteamApiService SteamApi
 @inject NavigationManager Navigation
 
 <PageTitle>Profile</PageTitle>
@@ -39,7 +40,44 @@ else if (_profile != null)
                         <span>Display Name</span>
                         <InputText type="text" @bind-Value="@Input.UserName" id="username" class="input w-full" placeholder="Choose your display name."/>
                     </label>
-                    <div class="card-actions justify-stretch">
+                    <div class="mb-1">
+                        <label class="label text-sm font-semibold mb-1">Steam ID</label>
+                        <div class="flex gap-2">
+                            <input type="text" @bind="Input.SteamInput" @bind:event="oninput"
+                                   class="input input-bordered flex-1"
+                                   placeholder="Steam ID, profile URL, or username"/>
+                            <button type="button" class="btn btn-outline btn-sm self-center"
+                                    @onclick="VerifySteamIdAsync" disabled="@(_isVerifying || string.IsNullOrWhiteSpace(Input.SteamInput))">
+                                @if (_isVerifying)
+                                {
+                                    <span class="loading loading-spinner loading-xs"></span>
+                                }
+                                Verify
+                            </button>
+                        </div>
+                        @if (_steamVerifyResult != null)
+                        {
+                            <div class="mt-1 text-sm text-success flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                </svg>
+                                Verified: @_steamVerifyResult.DisplayName (@_steamVerifyResult.SteamId)
+                            </div>
+                        }
+                        @if (_steamVerifyError != null)
+                        {
+                            <div class="mt-1 text-sm text-error">@_steamVerifyError</div>
+                        }
+                        <p class="text-xs opacity-60 mt-1">
+                            Enter your Steam ID, profile URL, or custom username.
+                            Not sure? Find it at <a href="https://steamid.io" target="_blank" rel="noopener noreferrer" class="link">steamid.io</a>.
+                        </p>
+                        @if (!string.IsNullOrWhiteSpace(Input.SteamId) && _steamVerifyResult == null)
+                        {
+                            <p class="text-xs opacity-50 mt-1">Current Steam ID: @Input.SteamId</p>
+                        }
+                    </div>
+                    <div class="card-actions justify-stretch mt-3">
                         <button type="submit" class="btn btn-lg btn-primary w-full" disabled="@_isSaving">
                             @if (_isSaving)
                             {
@@ -58,7 +96,10 @@ else if (_profile != null)
     private ProfileDto? _profile;
     private bool _isLoading = true;
     private bool _isSaving;
+    private bool _isVerifying;
     private string? _statusMessage;
+    private SteamResolveResult? _steamVerifyResult;
+    private string? _steamVerifyError;
 
     [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
 
@@ -71,6 +112,8 @@ else if (_profile != null)
             {
                 Input.Email ??= _profile.Email;
                 Input.UserName ??= _profile.UserName;
+                Input.SteamId = _profile.SteamId;
+                Input.SteamInput ??= _profile.SteamId;
             }
         }
         catch (Exception ex)
@@ -80,6 +123,40 @@ else if (_profile != null)
         finally
         {
             _isLoading = false;
+        }
+    }
+
+    private async Task VerifySteamIdAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Input.SteamInput)) return;
+
+        _isVerifying = true;
+        _steamVerifyResult = null;
+        _steamVerifyError = null;
+
+        try
+        {
+            var result = await SteamApi.ResolveSteamIdAsync(Input.SteamInput);
+
+            if (result is { Success: true, Data: not null })
+            {
+                _steamVerifyResult = result.Data;
+                Input.SteamId = result.Data.SteamId;
+                _steamVerifyError = null;
+            }
+            else
+            {
+                _steamVerifyError = result.ErrorMessage ?? "Could not verify Steam ID";
+                Input.SteamId = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _steamVerifyError = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isVerifying = false;
         }
     }
 
@@ -96,14 +173,14 @@ else if (_profile != null)
             var request = new UpdateProfileRequest
             {
                 Email = Input.Email ?? "",
-                UserName = Input.UserName ?? ""
+                UserName = Input.UserName ?? "",
+                SteamId = Input.SteamId
             };
 
             var result = await AccountApi.UpdateProfileAsync(request);
 
             if (result.Success)
             {
-                // Force reload to refresh auth state with new username/email
                 Navigation.NavigateTo("Account/Manage?status=Your profile has been updated", forceLoad: true);
             }
             else
@@ -125,5 +202,7 @@ else if (_profile != null)
     {
         public string? UserName { get; set; }
         public string? Email { get; set; }
+        public string? SteamId { get; set; }
+        public string? SteamInput { get; set; }
     }
 }

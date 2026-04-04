@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FunMasters.Services;
 
-public class QueueManager(ApplicationDbContext db)
+public class QueueManager(ApplicationDbContext db, SteamPlaytimeService steamPlaytimeService)
 {
     private static readonly TimeSpan GamePlayPeriod = TimeSpan.FromDays(14);
     
@@ -19,6 +19,8 @@ public class QueueManager(ApplicationDbContext db)
         if (active is { FinishedAtUtc: not null } && now.ToLocalTime().Date >= active.FinishedAtUtc.Value.ToLocalTime().Date)
         {
             active.Status = SuggestionStatus.Finished;
+            await db.SaveChangesAsync();
+            await steamPlaytimeService.CaptureAllPlaytimesOnFinishAsync(active.Id);
         }
 
         // If there’s no active game, promote next one

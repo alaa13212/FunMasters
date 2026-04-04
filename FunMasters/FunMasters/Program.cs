@@ -85,6 +85,9 @@ builder.Services.AddScoped<IClaimsTransformation, AvatarClaimsTransformation>();
 
 builder.Services.AddHttpClient<IgdbService>();
 builder.Services.AddHttpClient<HltbService>();
+builder.Services.AddHttpClient<SteamService>();
+builder.Services.AddScoped<SteamPlaytimeService>();
+builder.Services.AddScoped<ISteamApiService, SteamApiService>();
 builder.Services.AddScoped<GameCoverStorage>();
 builder.Services.AddScoped<AvatarStorage>();
 builder.Services.AddScoped<QueueManager>();
@@ -152,6 +155,7 @@ app.MapAdminEndpoints();
 app.MapAccountEndpoints();
 app.MapIgdbEndpoints();
 app.MapHltbEndpoints();
+app.MapSteamEndpoints();
 
 using (var scope = app.Services.CreateScope()) {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
