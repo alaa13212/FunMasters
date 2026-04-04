@@ -1,20 +1,23 @@
-﻿namespace FunMasters.Shared.DTOs;
+namespace FunMasters.Shared.DTOs;
 
 [Serializable]
 public class RatingModel
 {
     public UserRatingDto Rating { get; set; } = null!;
-    public decimal Score { get; set; }
-    public string? Comment { get; set; }
-    public bool IsSubmitting { get; set; }
+    public ReviewFormModel Form { get; set; } = new();
 
-    public RatingModel() {}
+    public RatingModel() { }
+
     public RatingModel(UserRatingDto rating)
     {
         Rating = rating;
-        Score = rating.DecimalScore;
-        Comment = rating.Comment;
+        Form = new ReviewFormModel
+        {
+            Score = rating.DecimalScore,
+            Comment = rating.Comment,
+            PlaytimeHours = rating.PlaytimeForeverMinutes.HasValue
+                ? Math.Round(rating.PlaytimeForeverMinutes.Value / 60m, 1)
+                : null
+        };
     }
-
-    public string GetRatingLabel() => RatingUtils.GetRatingLabel((int)(Score * 10));
 }

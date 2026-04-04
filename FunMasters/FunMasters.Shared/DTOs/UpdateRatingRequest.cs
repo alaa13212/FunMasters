@@ -4,4 +4,5 @@ public class UpdateRatingRequest
 {
     public int Score { get; set; }
     public string? Comment { get; set; }
+    public int? ManualPlaytimeMinutes { get; set; }
 }

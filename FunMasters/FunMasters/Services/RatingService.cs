@@ -44,17 +44,27 @@ public class RatingService(
             .OrderByDescending(r => r.CreatedAtUtc)
             .ToListAsync();
 
-        return ratings.Select(r => new UserRatingDto
+        var suggestionIds = ratings.Select(r => r.SuggestionId).ToHashSet();
+        var playtimes = await db.SteamPlaytimes
+            .Where(sp => sp.UserId == userId && suggestionIds.Contains(sp.SuggestionId))
+            .ToDictionaryAsync(sp => sp.SuggestionId);
+
+        return ratings.Select(r =>
         {
-            RatingId = r.Id,
-            Score = r.Score,
-            Comment = r.Comment,
-            CreatedAtUtc = r.CreatedAtUtc,
-            RatingLabel = RatingUtils.GetRatingLabel(r.Score),
-            SuggestionId = r.SuggestionId,
-            Title = r.Suggestion?.Title ?? "",
-            CoverImageUrl = coverStorage.GetPublicUrl(r.SuggestionId),
-            FinishedAtUtc = r.Suggestion?.FinishedAtUtc
+            playtimes.TryGetValue(r.SuggestionId, out var pt);
+            return new UserRatingDto
+            {
+                RatingId = r.Id,
+                Score = r.Score,
+                Comment = r.Comment,
+                CreatedAtUtc = r.CreatedAtUtc,
+                RatingLabel = RatingUtils.GetRatingLabel(r.Score),
+                SuggestionId = r.SuggestionId,
+                Title = r.Suggestion?.Title ?? "",
+                CoverImageUrl = coverStorage.GetPublicUrl(r.SuggestionId),
+                FinishedAtUtc = r.Suggestion?.FinishedAtUtc,
+                PlaytimeForeverMinutes = pt?.PlaytimeForeverMinutes
+            };
         }).ToList();
     }
 
@@ -90,6 +100,9 @@ public class RatingService(
         db.Ratings.Add(rating);
         await db.SaveChangesAsync();
 
+        if (request.ManualPlaytimeMinutes.HasValue)
+            await UpsertManualPlaytimeAsync(userId, request.SuggestionId, request.ManualPlaytimeMinutes.Value);
+
         return ApiResult<Guid>.Ok(rating.Id);
     }
 
@@ -113,7 +126,36 @@ public class RatingService(
 
         await db.SaveChangesAsync();
 
+        if (request.ManualPlaytimeMinutes.HasValue)
+            await UpsertManualPlaytimeAsync(userId, rating.SuggestionId, request.ManualPlaytimeMinutes.Value);
+
         return ApiResult.Ok();
+    }
+
+    private async Task UpsertManualPlaytimeAsync(Guid userId, Guid suggestionId, int manualMinutes)
+    {
+        var existing = await db.SteamPlaytimes
+            .FirstOrDefaultAsync(sp => sp.UserId == userId && sp.SuggestionId == suggestionId);
+
+        if (existing == null)
+        {
+            existing = new Data.SteamPlaytime
+            {
+                SuggestionId = suggestionId,
+                UserId = userId,
+                CapturedAtUtc = DateTime.UtcNow
+            };
+            db.SteamPlaytimes.Add(existing);
+        }
+
+        // Only set if manually entered value is higher than what is already stored
+        if (!existing.PlaytimeForeverMinutes.HasValue || manualMinutes > existing.PlaytimeForeverMinutes.Value)
+        {
+            existing.PlaytimeForeverMinutes = manualMinutes;
+            existing.ErrorMessage = null;
+        }
+
+        await db.SaveChangesAsync();
     }
 
     private SuggestionDto MapToDto(Suggestion suggestion)

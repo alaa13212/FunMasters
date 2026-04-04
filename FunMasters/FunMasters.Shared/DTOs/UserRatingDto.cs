@@ -18,4 +18,7 @@ public class UserRatingDto
     public string Title { get; set; } = null!;
     public string? CoverImageUrl { get; set; }
     public DateTime? FinishedAtUtc { get; set; }
+
+    // Playtime info (from SteamPlaytime record, may be manually set)
+    public int? PlaytimeForeverMinutes { get; set; }
 }

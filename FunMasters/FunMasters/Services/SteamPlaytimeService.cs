@@ -67,8 +67,17 @@ public class SteamPlaytimeService(
             try
             {
                 var result = await steamService.GetPlaytimeAsync(user.SteamId!, appId.Value);
-                existing.PlaytimeForeverMinutes = result?.playtimeForever;
-                existing.ErrorMessage = result == null ? "Game not found in Steam library or profile is private" : null;
+                if (result == null)
+                {
+                    existing.ErrorMessage = "Game not found in Steam library or profile is private";
+                }
+                else
+                {
+                    // Don't override a higher stored value (e.g. manually entered cross-platform playtime)
+                    if (!existing.PlaytimeForeverMinutes.HasValue || result.Value.playtimeForever > existing.PlaytimeForeverMinutes.Value)
+                        existing.PlaytimeForeverMinutes = result.Value.playtimeForever;
+                    existing.ErrorMessage = null;
+                }
             }
             catch (Exception ex)
             {
@@ -83,7 +92,9 @@ public class SteamPlaytimeService(
         foreach (var (userId, record) in records)
             record.User ??= users.First(u => u.Id == userId);
 
-        return records.Values.Select(MapToDto).ToList();
+        return records.Values
+            .Where(p => p.PlaytimeForeverMinutes > 0)
+            .Select(MapToDto).ToList();
     }
 
     public async Task<List<SteamPlaytimeDto>> GetPlaytimesForSuggestionAsync(Guid suggestionId)
@@ -93,7 +104,9 @@ public class SteamPlaytimeService(
             .Where(sp => sp.SuggestionId == suggestionId)
             .ToListAsync();
 
-        return playtimes.Select(sp => MapToDto(sp)).ToList();
+        return playtimes
+            .Where(p => p.PlaytimeForeverMinutes > 0)
+            .Select(sp => MapToDto(sp)).ToList();
     }
 
     public async Task<(string? steamId, string? displayName, string? error)> ResolveSteamInputAsync(string input)
@@ -166,7 +179,9 @@ public class SteamPlaytimeService(
                 existing.Playtime2WeeksMinutes = result.Value.playtime2Weeks;
                 if (captureForever)
                 {
-                    existing.PlaytimeForeverMinutes = result.Value.playtimeForever;
+                    // Don't override a higher stored value (e.g. manually entered cross-platform playtime)
+                    if (!existing.PlaytimeForeverMinutes.HasValue || result.Value.playtimeForever > existing.PlaytimeForeverMinutes.Value)
+                        existing.PlaytimeForeverMinutes = result.Value.playtimeForever;
                     existing.ForeverUpdatedAtUtc = DateTime.UtcNow;
                 }
                 existing.ErrorMessage = null;

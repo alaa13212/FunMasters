@@ -100,6 +100,7 @@ else if (_profile != null)
     private string? _statusMessage;
     private SteamResolveResult? _steamVerifyResult;
     private string? _steamVerifyError;
+    private string? _lastVerifiedInput;
 
     [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
 
@@ -114,6 +115,7 @@ else if (_profile != null)
                 Input.UserName ??= _profile.UserName;
                 Input.SteamId = _profile.SteamId;
                 Input.SteamInput ??= _profile.SteamId;
+                _lastVerifiedInput = _profile.SteamId;
             }
         }
         catch (Exception ex)
@@ -142,6 +144,7 @@ else if (_profile != null)
             {
                 _steamVerifyResult = result.Data;
                 Input.SteamId = result.Data.SteamId;
+                _lastVerifiedInput = Input.SteamInput;
                 _steamVerifyError = null;
             }
             else
@@ -158,6 +161,9 @@ else if (_profile != null)
         {
             _isVerifying = false;
         }
+
+        if (_steamVerifyResult != null)
+            await OnValidSubmitAsync();
     }
 
     private async Task OnValidSubmitAsync()
@@ -170,6 +176,28 @@ else if (_profile != null)
 
         try
         {
+            if (!string.IsNullOrWhiteSpace(Input.SteamInput) && Input.SteamInput != _lastVerifiedInput)
+            {
+                var resolveResult = await SteamApi.ResolveSteamIdAsync(Input.SteamInput);
+                if (resolveResult is { Success: true, Data: not null })
+                {
+                    _steamVerifyResult = resolveResult.Data;
+                    Input.SteamId = resolveResult.Data.SteamId;
+                    _lastVerifiedInput = Input.SteamInput;
+                    _steamVerifyError = null;
+                }
+                else
+                {
+                    _statusMessage = resolveResult.ErrorMessage ?? "Could not verify Steam ID";
+                    _isSaving = false;
+                    return;
+                }
+            }
+            else if (string.IsNullOrWhiteSpace(Input.SteamInput))
+            {
+                Input.SteamId = null;
+            }
+
             var request = new UpdateProfileRequest
             {
                 Email = Input.Email ?? "",

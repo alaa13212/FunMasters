@@ -109,38 +109,10 @@
                         {
                             <div class="divider text-2xl">Finished Playing? - Rate this game</div>
                             <div class="max-w-[650px] w-full mx-auto">
-                                <EditForm Model="_ratingRecord" method="post" OnValidSubmit="RateGame"
-                                          FormName="@("rate-" + Game.Suggestion.Id.ToString("n"))">
-                                    <DataAnnotationsValidator/>
-                                    <fieldset class="fieldset">
-                                        <legend class="fieldset-legend">
-                                            Score: @_ratingRecord.Score @_ratingRecord.GetRatingLabel()</legend>
-
-                                        <input type="range" @bind="_ratingRecord.Score" @bind:event="oninput"
-                                               class="range w-full" min="0.1" max="10" step="0.1"/>
-                                    </fieldset>
-                                    <fieldset>
-                                        <legend class="fieldset-legend">Comment</legend>
-                                        <InputTextArea @bind-Value="_ratingRecord.Comment"
-                                                       id="@("rate-comment-" + Game.Suggestion.Id.ToString("n"))"
-                                                       class="textarea min-h-24 field-sizing-content w-full" placeholder="Optional"/>
-
-                                    </fieldset>
-                                    <div class="form-floating mb-3">
-                                        <label for="@("rate-comment-" + Game.Suggestion.Id.ToString("n"))"
-                                               class="form-label"></label>
-                                    </div>
-                                    <div>
-                                        <button type="submit" class="btn btn-lg btn-primary w-full"
-                                                disabled="@_isSubmittingRating">
-                                            @if (_isSubmittingRating)
-                                            {
-                                                <span class="loading loading-spinner"></span>
-                                            }
-                                            Rate
-                                        </button>
-                                    </div>
-                                </EditForm>
+                                <ReviewForm Model="_ratingRecord"
+                                            FormName="@("rate-" + Game.Suggestion.Id.ToString("n"))"
+                                            SubmitLabel="Rate"
+                                            OnValidSubmit="RateGame"/>
                             </div>
                             <div class="divider"></div>
                         }
@@ -161,7 +133,7 @@
                                             @if (rating.PlaytimeForeverMinutes.HasValue || rating.Playtime2WeeksMinutes.HasValue)
                                             {
                                                 <a href="@rating.RaterSteamProfileUrl" target="_blank" rel="noopener noreferrer"
-                                                   class="text-sm opacity-70 hover:opacity-100 flex items-center gap-1 @(rating.RaterSteamProfileUrl == null ? "pointer-events-none" : "")">
+                                                   class="text-sm opacity-70 hover:opacity-100 flex items-center gap-1 w-fit @(rating.RaterSteamProfileUrl == null ? "pointer-events-none" : "")">
                                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                         <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                                                     </svg>
@@ -232,9 +204,8 @@
     private Guid? _myId;
     private bool _loading = true;
     private bool _canRate;
-    private bool _isSubmittingRating;
 
-    private RatingRecord _ratingRecord = new();
+    private ReviewFormModel _ratingRecord = new();
 
     private List<GameRatingViewModel> _ratingViewModels = [];
     private bool _hltbLoading = true;
@@ -276,25 +247,7 @@
 
                 _canRate = hasNoRatings && Game.Suggestion.Status is SuggestionStatus.Active or SuggestionStatus.Finished;
                 if (_canRate)
-                    _ratingRecord = new RatingRecord();
-
-                try
-                {
-                    StateHasChanged();
-                    HltbData ??= await HltbApi.SearchGameAsync(Game.Suggestion.Title);
-                }
-                catch (Exception)
-                {
-                    HltbData = null;
-                }
-                finally
-                {
-                    _hltbLoading = false;
-                }
-
-                // Auto-refresh all playtimes on load (respects 6h server-side cooldown per user)
-                if (_myId.HasValue)
-                    _ = AutoRefreshPlaytimesAsync();
+                    _ratingRecord = new ReviewFormModel();
             }
         }
         catch (Exception)
@@ -307,12 +260,34 @@
         }
     }
 
-    private async Task RateGame(EditContext context)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+        
+        try
+        {
+            HltbData ??= await HltbApi.SearchGameAsync(Game.Suggestion.Title);
+        }
+        catch (Exception)
+        {
+            HltbData = null;
+        }
+        finally
+        {
+            _hltbLoading = false;
+        }
+
+        // Auto-refresh all playtimes on load
+        await AutoRefreshPlaytimesAsync();
+    }
+
+    private async Task RateGame()
     {
         if (Game == null || _myId == null)
             return;
 
-        _isSubmittingRating = true;
+        _ratingRecord.IsSubmitting = true;
 
         try
         {
@@ -320,7 +295,10 @@
             {
                 SuggestionId = Game.Suggestion.Id,
                 Score = (int)(_ratingRecord.Score * 10),
-                Comment = _ratingRecord.Comment
+                Comment = _ratingRecord.Comment,
+                ManualPlaytimeMinutes = _ratingRecord.PlaytimeHours.HasValue
+                    ? (int)(_ratingRecord.PlaytimeHours.Value * 60)
+                    : null
             };
 
             var result = await RatingApi.CreateRatingAsync(request);
@@ -336,7 +314,7 @@
         }
         finally
         {
-            _isSubmittingRating = false;
+            _ratingRecord.IsSubmitting = false;
         }
     }
 
@@ -388,14 +366,6 @@
     {
         public RatingDto Rating { get; set; } = rating;
         public bool IsSpoiler { get; set; } = isSpoiler;
-    }
-
-    private class RatingRecord
-    {
-        public decimal Score { get; set; } = 10m;
-        public string? Comment { get; set; }
-
-        public string GetRatingLabel() => RatingUtils.GetRatingLabel((int)(Score * 10));
     }
 
 }
