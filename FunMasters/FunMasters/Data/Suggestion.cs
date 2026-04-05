@@ -36,4 +36,7 @@ public class Suggestion
     public int RatingsCount => Ratings.Count;
 
     public ICollection<Rating> Ratings { get; set; } = [];
+
+    // Steam discount tracking — price in halalas (Steam minor unit, e.g. 4999 = 49.99 SAR)
+    public int? LastKnownPriceSar { get; set; }
 }

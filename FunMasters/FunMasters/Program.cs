@@ -26,6 +26,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AuthenticationStateProvider, PersistingRevalidatingAuthenticationStateProvider>();
 builder.Services.AddHostedService<QueueManagerJob>();
+builder.Services.AddHostedService<SteamDiscountJob>();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
                        throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
@@ -86,6 +87,8 @@ builder.Services.AddScoped<IClaimsTransformation, AvatarClaimsTransformation>();
 builder.Services.AddHttpClient<IgdbService>();
 builder.Services.AddHttpClient<HltbService>();
 builder.Services.AddHttpClient<SteamService>();
+builder.Services.AddHttpClient<SteamStoreService>();
+builder.Services.AddHttpClient<TelegramService>();
 builder.Services.AddScoped<SteamPlaytimeService>();
 builder.Services.AddScoped<ISteamApiService, SteamApiService>();
 builder.Services.AddScoped<GameCoverStorage>();
