@@ -57,6 +57,7 @@ public class SuggestionService(
             .Max(u => u!.CycleOrder);
 
         var suggestionsByUser = suggestions
+            .Where(s => s.SuggestedBy!.CycleOrder > 0)
             .GroupBy(s => s.SuggestedById)
             .Select(g => new
             {
@@ -83,6 +84,8 @@ public class SuggestionService(
             suggestionsByUser.RemoveAll(group => group.Suggestions.Count == 0);
         } while (suggestionsByUser.Any());
 
+        finalSort.AddRange(suggestions.Where(s => s.SuggestedBy!.CycleOrder < 1));
+        
         return finalSort.Select(MapToDto).ToList();
     }
 
