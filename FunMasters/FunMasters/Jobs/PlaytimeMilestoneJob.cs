@@ -10,7 +10,7 @@ public class PlaytimeMilestoneJob : BackgroundService
     private readonly IServiceProvider _services;
     private readonly ILogger<PlaytimeMilestoneJob> _logger;
     private static readonly TimeSpan Interval = TimeSpan.FromHours(6);
-    private static readonly int[] MilestoneMinutes = [300, 600, 1200];
+    private static readonly int[] MilestoneMinutes = [300, 600, 1200, 1800];
 
     public PlaytimeMilestoneJob(IServiceProvider services, ILogger<PlaytimeMilestoneJob> logger)
     {
@@ -82,7 +82,7 @@ public class PlaytimeMilestoneJob : BackgroundService
 
             // Find which milestone was crossed
             var crossedMilestone = MilestoneMinutes
-                .FirstOrDefault(m => previousMinutes < m && currentMinutes >= m);
+                .LastOrDefault(m => previousMinutes < m && currentMinutes >= m);
 
             if (crossedMilestone > 0)
             {
