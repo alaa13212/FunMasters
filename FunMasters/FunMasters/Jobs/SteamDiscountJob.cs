@@ -42,6 +42,7 @@ public class SteamDiscountJob : BackgroundService
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var steamStore = scope.ServiceProvider.GetRequiredService<SteamStoreService>();
         var steamService = scope.ServiceProvider.GetRequiredService<SteamService>();
+        var lucian = scope.ServiceProvider.GetRequiredService<LucianGalade>();
         var telegram = scope.ServiceProvider.GetRequiredService<TelegramService>();
 
         var queuedWithSteam = await db.Suggestions
@@ -52,6 +53,7 @@ public class SteamDiscountJob : BackgroundService
             .Where(u => u.CycleOrder > 0 && u.SteamId != null)
             .ToListAsync(stoppingToken);
 
+        var ownershipCache = new Dictionary<int, bool>();
         var toNotify = new List<DiscountedGame>();
 
         foreach (var suggestion in queuedWithSteam)
@@ -72,13 +74,39 @@ public class SteamDiscountJob : BackgroundService
                 continue;
             }
 
+            // Check for price back up (previously discounted, now not)
             if (price == null || price.DiscountPercent <= 0)
             {
+                if (suggestion.LastKnownPriceSar.HasValue)
+                {
+                    var previousPrice = suggestion.LastKnownPriceSar.Value;
+                    if (price != null && price.FinalPrice > previousPrice)
+                    {
+                        if (!await CachedAllMembersOwnGameAsync(steamService, activeMembers, appId.Value, ownershipCache))
+                        {
+                            try { await lucian.SendPriceBackUpAsync(suggestion.Title, price.FinalFormatted); }
+                            catch (Exception ex) { _logger.LogWarning(ex, "Failed to send price-back-up notification"); }
+                        }
+                    }
+                }
+
                 if (price != null && suggestion.LastKnownPriceSar != price.FinalPrice)
                 {
                     suggestion.LastKnownPriceSar = price.FinalPrice;
                 }
                 continue;
+            }
+
+            // #8 Game Free notification (100% discount, price = 0)
+            if (price is { DiscountPercent: 100, FinalPrice: 0 })
+            {
+                if (activeMembers.Count > 0 && !await CachedAllMembersOwnGameAsync(steamService, activeMembers, appId.Value, ownershipCache))
+                {
+                    suggestion.LastKnownPriceSar = 0;
+                    try { await lucian.SendGameFreeAsync(suggestion.Title, $"https://store.steampowered.com/app/{appId.Value}"); }
+                    catch (Exception ex) { _logger.LogWarning(ex, "Failed to send game-free notification"); }
+                    continue;
+                }
             }
 
             // Only notify if price dropped since last check
@@ -89,7 +117,7 @@ public class SteamDiscountJob : BackgroundService
             }
 
             // Skip if every active member already owns the game
-            if (activeMembers.Count > 0 && await AllMembersOwnGameAsync(steamService, activeMembers, appId.Value))
+            if (activeMembers.Count > 0 && await CachedAllMembersOwnGameAsync(steamService, activeMembers, appId.Value, ownershipCache))
             {
                 _logger.LogInformation("Skipping notification for {Title} — all active members already own it", suggestion.Title);
                 suggestion.LastKnownPriceSar = price.FinalPrice;
@@ -104,42 +132,25 @@ public class SteamDiscountJob : BackgroundService
 
         if (toNotify.Count == 0) return;
 
-        await telegram.SendMessageAsync(BuildMessage(toNotify));
+        var message = LucianGalade.BuildDiscountMessage(
+            toNotify.Select(g => (g.Title, g.AppId, g.Price)).ToList());
+        await telegram.SendMessageAsync(message);
         _logger.LogInformation("Sent discount notification for {Count} game(s): {Titles}",
             toNotify.Count, string.Join(", ", toNotify.Select(g => g.Title)));
     }
 
-    private static string BuildMessage(List<DiscountedGame> games)
+    private async Task<bool> CachedAllMembersOwnGameAsync(
+        SteamService steamService, List<ApplicationUser> members, int appId, Dictionary<int, bool> cache)
     {
-        var sb = new System.Text.StringBuilder();
-        sb.AppendLine("Esteemed members of <b>The Council of Fun Masters</b>,\n");
+        if (cache.TryGetValue(appId, out var cached))
+            return cached;
 
-        if (games.Count == 1)
-        {
-            var g = games[0];
-            sb.AppendLine($"It is my duty to inform you that <b>{EscapeHtml(g.Title)}</b>, " +
-                          $"a title currently awaiting the Council's deliberation, has been marked down on Steam.\n");
-            sb.AppendLine($"<s>{EscapeHtml(g.Price.InitialFormatted)}</s> → <b>{EscapeHtml(g.Price.FinalFormatted)}</b>  (-{g.Price.DiscountPercent}%)");
-            sb.AppendLine($"https://store.steampowered.com/app/{g.AppId}");
-        }
-        else
-        {
-            sb.AppendLine($"It is my duty to inform you that {games.Count} titles currently awaiting " +
-                          $"the Council's deliberation have been marked down on Steam.\n");
-            foreach (var g in games)
-            {
-                sb.AppendLine($"▪ <b>{EscapeHtml(g.Title)}</b>");
-                sb.AppendLine($"  <s>{EscapeHtml(g.Price.InitialFormatted)}</s> → <b>{EscapeHtml(g.Price.FinalFormatted)}</b>  (-{g.Price.DiscountPercent}%)");
-                sb.AppendLine($"  https://store.steampowered.com/app/{g.AppId}");
-            }
-        }
-
-        sb.AppendLine("\nThe Council would do well to act swiftly.");
-        sb.Append("\n<i>— Lucian Galade, Chief of Staff</i>");
-        return sb.ToString();
+        var result = await AllMembersOwnGameAsync(steamService, members, appId);
+        cache[appId] = result;
+        return result;
     }
 
-    private async Task<bool> AllMembersOwnGameAsync(SteamService steamService, List<ApplicationUser> members, int appId)
+    private static async Task<bool> AllMembersOwnGameAsync(SteamService steamService, List<ApplicationUser> members, int appId)
     {
         foreach (var member in members)
         {
@@ -149,7 +160,4 @@ public class SteamDiscountJob : BackgroundService
         }
         return true;
     }
-
-    private static string EscapeHtml(string text) =>
-        text.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
 }

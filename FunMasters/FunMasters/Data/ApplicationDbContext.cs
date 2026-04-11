@@ -14,6 +14,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Cycle> Cycles { get; set; }
     public DbSet<CycleVote> CycleVotes { get; set; }
     public DbSet<SteamPlaytime> SteamPlaytimes { get; set; }
+    public DbSet<PendingNotification> PendingNotifications { get; set; }
     
     
     protected override void OnModelCreating(ModelBuilder builder)
@@ -44,6 +45,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<Suggestion>().Property(e => e.FinishedAtUtc).HasConversion(utcConverter);
         builder.Entity<SteamPlaytime>().Property(e => e.CapturedAtUtc).HasConversion(utcConverter);
         builder.Entity<SteamPlaytime>().Property(e => e.ForeverUpdatedAtUtc).HasConversion(utcConverter);
+        builder.Entity<PendingNotification>().Property(e => e.SendAfterUtc).HasConversion(utcConverter);
+        builder.Entity<PendingNotification>().Property(e => e.CreatedAtUtc).HasConversion(utcConverter);
     }
     
 }

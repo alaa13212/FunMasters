@@ -12,7 +12,8 @@ public class AdminService(
     UserManager<ApplicationUser> userManager,
     GameCoverStorage coverStorage,
     AvatarStorage avatarStorage,
-    QueueManager queueManager) : IAdminApiService
+    QueueManager queueManager,
+    LucianGalade lucianGalade) : IAdminApiService
 {
     private const string AdminRole = "Admin";
 
@@ -98,6 +99,9 @@ public class AdminService(
         {
             await userManager.AddToRoleAsync(user, AdminRole);
         }
+
+        if (request.CycleOrder > 0)
+            await lucianGalade.SendNewMemberAsync(request.UserName);
 
         return ApiResult<Guid>.Ok(user.Id);
     }
@@ -256,11 +260,24 @@ public class AdminService(
         if (suggestion.ActiveAtUtc == null)
             return ApiResult.Fail("Suggestion has no active date");
 
+        var originalFinish = suggestion.FinishedAtUtc;
         suggestion.FinishedAtUtc = FunMastersTime.MidnightUtc3AsUtc(
             (suggestion.ActiveAtUtc.Value + FunMastersTime.UtcPlus3).Date + TimeSpan.FromDays(7));
 
+        var daysCut = originalFinish.HasValue
+            ? (int)(originalFinish.Value - suggestion.FinishedAtUtc.Value).TotalDays
+            : 0;
+
         await db.SaveChangesAsync();
         await queueManager.UpdateQueueAsync();
+
+        if (daysCut > 0)
+        {
+            await lucianGalade.SendFinishEarlyAsync(
+                suggestion.Title,
+                daysCut,
+                (suggestion.FinishedAtUtc.Value + FunMastersTime.UtcPlus3).Date);
+        }
 
         return ApiResult.Ok();
     }

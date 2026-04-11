@@ -13,6 +13,7 @@ public class SuggestionService(
     AvatarStorage avatarStorage,
     QueueManager queueManager,
     SteamPlaytimeService steamPlaytimeService,
+    LucianGalade lucianGalade,
     IHttpContextAccessor httpContextAccessor) : ISuggestionApiService
 {
     public async Task<HomePageDto> GetHomeDataAsync()
@@ -182,6 +183,10 @@ public class SuggestionService(
 
         await queueManager.UpdateQueueAsync();
 
+        var user = await db.Users.FindAsync(userId);
+        if (user != null)
+            await lucianGalade.SendNewSuggestionAsync(user.UserName ?? "Unknown", request.Title);
+
         return ApiResult<Guid>.Ok(suggestion.Id);
     }
 
@@ -192,9 +197,11 @@ public class SuggestionService(
         if (suggestion == null)
             return ApiResult.Fail("Suggestion not found");
 
-        // Only owner can update their own suggestion
         if (suggestion.SuggestedById != userId)
             return ApiResult.Fail("You can only update your own suggestions");
+
+        var wasPending = suggestion.Status == SuggestionStatus.Pending;
+        var titleChanged = suggestion.Title != request.Title;
 
         suggestion.Title = request.Title;
         suggestion.Order = request.Order;
@@ -219,6 +226,13 @@ public class SuggestionService(
 
         await queueManager.UpdateQueueAsync();
 
+        if (wasPending && titleChanged)
+        {
+            var user = await db.Users.FindAsync(userId);
+            if (user != null)
+                await lucianGalade.SendSuggestionEditedAsync(user.UserName ?? "Unknown", request.Title);
+        }
+
         return ApiResult.Ok();
     }
 
@@ -232,6 +246,9 @@ public class SuggestionService(
         // Only owner can delete their own suggestion
         if (suggestion.SuggestedById != userId)
             return ApiResult.Fail("You can only delete your own suggestions");
+
+        var wasPending = suggestion.Status == SuggestionStatus.Pending;
+        var user = await db.Users.FindAsync(userId);
 
         db.Suggestions.Remove(suggestion);
         await db.SaveChangesAsync();
@@ -249,6 +266,9 @@ public class SuggestionService(
 
         await db.SaveChangesAsync();
         await queueManager.UpdateQueueAsync();
+
+        if (wasPending && user != null)
+            await lucianGalade.SendSuggestionDeletedAsync(user.UserName ?? "Unknown");
 
         return ApiResult.Ok();
     }

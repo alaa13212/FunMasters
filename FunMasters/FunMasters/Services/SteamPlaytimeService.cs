@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using FunMasters.Data;
+using FunMasters.Shared;
 using FunMasters.Shared.DTOs;
 using Microsoft.EntityFrameworkCore;
 
@@ -77,6 +78,9 @@ public class SteamPlaytimeService(
                     if (!existing.PlaytimeForeverMinutes.HasValue || result.Value.playtimeForever > existing.PlaytimeForeverMinutes.Value)
                         existing.PlaytimeForeverMinutes = result.Value.playtimeForever;
                     existing.ErrorMessage = null;
+                    
+                    if(suggestion.Status == SuggestionStatus.Active)
+                        existing.Playtime2WeeksMinutes = result.Value.playtime2Weeks;
                 }
             }
             catch (Exception ex)

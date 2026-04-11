@@ -27,6 +27,12 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AuthenticationStateProvider, PersistingRevalidatingAuthenticationStateProvider>();
 builder.Services.AddHostedService<QueueManagerJob>();
 builder.Services.AddHostedService<SteamDiscountJob>();
+builder.Services.AddHostedService<MorningNotificationJob>();
+builder.Services.AddHostedService<RatingReminderJob>();
+builder.Services.AddHostedService<WeeklyDigestJob>();
+builder.Services.AddHostedService<PlaytimeShamingJob>();
+builder.Services.AddHostedService<PlaytimeMilestoneJob>();
+builder.Services.AddHostedService<QuarterlyDigestJob>();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
                        throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
@@ -94,6 +100,7 @@ builder.Services.AddScoped<ISteamApiService, SteamApiService>();
 builder.Services.AddScoped<GameCoverStorage>();
 builder.Services.AddScoped<AvatarStorage>();
 builder.Services.AddScoped<QueueManager>();
+builder.Services.AddScoped<LucianGalade>();
 
 // Enable access to HttpContext in services
 builder.Services.AddHttpContextAccessor();

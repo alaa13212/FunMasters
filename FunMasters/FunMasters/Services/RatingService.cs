@@ -11,6 +11,7 @@ public class RatingService(
     ApplicationDbContext db,
     AvatarStorage avatarStorage,
     GameCoverStorage coverStorage,
+    LucianGalade lucianGalade,
     IHttpContextAccessor httpContextAccessor) : IRatingApiService
 {
     public async Task<List<SuggestionDto>> GetUnratedSuggestionsAsync()
@@ -103,6 +104,8 @@ public class RatingService(
         if (request.ManualPlaytimeMinutes.HasValue)
             await UpsertManualPlaytimeAsync(userId, request.SuggestionId, request.ManualPlaytimeMinutes.Value);
 
+        await CheckAllRatingsInAsync(request.SuggestionId);
+
         return ApiResult<Guid>.Ok(rating.Id);
     }
 
@@ -130,6 +133,33 @@ public class RatingService(
             await UpsertManualPlaytimeAsync(userId, rating.SuggestionId, request.ManualPlaytimeMinutes.Value);
 
         return ApiResult.Ok();
+    }
+
+    private async Task CheckAllRatingsInAsync(Guid suggestionId)
+    {
+        var suggestion = await db.Suggestions
+            .Include(s => s.Ratings)
+            .FirstOrDefaultAsync(s => s.Id == suggestionId);
+
+        if (suggestion == null || suggestion.Status != SuggestionStatus.Finished)
+            return;
+
+        var cutoff = suggestion.ActiveAtUtc ?? suggestion.FinishedAtUtc!.Value;
+        var eligibleMemberIds = await db.Users
+            .Where(u => u.CycleOrder > 0 && u.RegistrationDateUtc <= cutoff)
+            .Select(u => u.Id)
+            .ToListAsync();
+
+        var raterIds = suggestion.Ratings.Select(r => r.RaterId).ToHashSet();
+        var unratedCount = eligibleMemberIds.Count(id => !raterIds.Contains(id));
+
+        if (unratedCount > 0) return;
+
+        var avg = suggestion.Ratings.Average(r => r.DecimalScore);
+        var label = RatingUtils.GetRatingLabel((int)Math.Round(avg * 10));
+
+        await lucianGalade.SendAllRatingsInAsync(
+            suggestion.Title, avg, label, suggestion.Ratings.Count);
     }
 
     private async Task UpsertManualPlaytimeAsync(Guid userId, Guid suggestionId, int manualMinutes)

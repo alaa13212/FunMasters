@@ -1,10 +1,10 @@
-using FunMasters.Data;
+﻿using FunMasters.Data;
 using FunMasters.Shared;
 using Microsoft.EntityFrameworkCore;
 
 namespace FunMasters.Services;
 
-public class QueueManager(ApplicationDbContext db, SteamPlaytimeService steamPlaytimeService)
+public class QueueManager(ApplicationDbContext db, SteamPlaytimeService steamPlaytimeService, LucianGalade lucianGalade)
 {
     public async Task UpdateQueueAsync()
     {
@@ -13,8 +13,10 @@ public class QueueManager(ApplicationDbContext db, SteamPlaytimeService steamPla
             .Include(s => s.SuggestedBy)
             .FirstOrDefaultAsync(s => s.Status == SuggestionStatus.Active);
 
+        Suggestion? finished = null;
         if (active is { FinishedAtUtc: not null } && now >= active.FinishedAtUtc.Value)
         {
+            finished = active;
             active.Status = SuggestionStatus.Finished;
             await db.SaveChangesAsync();
             await steamPlaytimeService.CaptureAllPlaytimesOnFinishAsync(active.Id);
@@ -23,11 +25,34 @@ public class QueueManager(ApplicationDbContext db, SteamPlaytimeService steamPla
         if (!await db.Suggestions.AnyAsync(s => s.Status == SuggestionStatus.Active))
         {
             Suggestion? next = await GetNextSuggestionAsync();
-            next?.Status = SuggestionStatus.Active;
+            if (next != null)
+            {
+                next.Status = SuggestionStatus.Active;
+                if (finished != null)
+                    await NotifyGameRotationAsync(finished, next);
+            }
         }
         await db.SaveChangesAsync();
 
         await RebuildQueueAsync();
+    }
+
+    private async Task NotifyGameRotationAsync(Suggestion outgoing, Suggestion incoming)
+    {
+        await db.Entry(incoming).Reference(s => s.SuggestedBy).LoadAsync();
+
+        var playtimes = await db.SteamPlaytimes
+            .Include(sp => sp.User)
+            .Where(sp => sp.SuggestionId == outgoing.Id && sp.Playtime2WeeksMinutes > 0)
+            .ToListAsync();
+
+        var playtimeData = playtimes.Select(sp => (sp.User!.UserName ?? "Unknown", sp.Playtime2WeeksMinutes!.Value));
+
+        var message = LucianGalade.BuildGameRotationMessage(
+            outgoing.Title, playtimeData, incoming.Title,
+            incoming.SuggestedBy?.UserName ?? "Unknown", incoming.SteamLink);
+
+        await lucianGalade.QueueForMorningAsync(message);
     }
     
     public async Task<Suggestion?> GetNextSuggestionAsync()
