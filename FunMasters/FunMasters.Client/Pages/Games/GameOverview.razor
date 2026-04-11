@@ -173,7 +173,7 @@
                                                     @pt.PlaytimeForeverDisplay total
                                                     @if (pt.Playtime2WeeksMinutes.HasValue)
                                                     {
-                                                        <span>(@pt.Playtime2WeeksDisplay at finish)</span>
+                                                        <span>(@pt.Playtime2WeeksDisplay @(Game.Suggestion.Status == SuggestionStatus.Active? " last 2 weeks" : "at finish")</span>
                                                     }
                                                 </span>
                                             }
