@@ -61,7 +61,7 @@
 
     private void UpdateTime()
     {
-        var remaining = EndDate - DateTime.Now;
+        var remaining = EndDate.ToLocalTime() - DateTime.Now;
 
         if (remaining < TimeSpan.Zero)
             remaining = TimeSpan.Zero;

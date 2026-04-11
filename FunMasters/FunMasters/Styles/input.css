@@ -172,3 +172,8 @@
     white-space: nowrap;
     width: calc(var(--rating) / 10 * 100%);
 }
+
+.constitution-page {
+    --font-serif: 'EB Garamond', 'Times New Roman', Times, Georgia, serif;
+    font-family: 'EB Garamond', 'Times New Roman', Times, Georgia, serif;
+}
