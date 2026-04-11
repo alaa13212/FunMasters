@@ -248,6 +248,25 @@
                 _canRate = hasNoRatings && Game.Suggestion.Status is SuggestionStatus.Active or SuggestionStatus.Finished;
                 if (_canRate)
                     _ratingRecord = new ReviewFormModel();
+                
+                StateHasChanged();
+
+                try
+                {
+                    HltbData ??= await HltbApi.SearchGameAsync(Game.Suggestion.Title);
+                    StateHasChanged();
+                }
+                catch (Exception)
+                {
+                    HltbData = null;
+                }
+                finally
+                {
+                    _hltbLoading = false;
+                }
+
+                // Auto-refresh all playtimes on load
+                await AutoRefreshPlaytimesAsync();
             }
         }
         catch (Exception)
@@ -260,27 +279,6 @@
         }
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender)
-            return;
-        
-        try
-        {
-            HltbData ??= await HltbApi.SearchGameAsync(Game.Suggestion.Title);
-        }
-        catch (Exception)
-        {
-            HltbData = null;
-        }
-        finally
-        {
-            _hltbLoading = false;
-        }
-
-        // Auto-refresh all playtimes on load
-        await AutoRefreshPlaytimesAsync();
-    }
 
     private async Task RateGame()
     {
@@ -320,7 +318,9 @@
 
     private async Task AutoRefreshPlaytimesAsync()
     {
-        if (Game == null) return;
+        if (Game == null)
+            return;
+        
         try
         {
             var result = await SteamApi.RefreshPlaytimesAsync(Game.Suggestion.Id);
