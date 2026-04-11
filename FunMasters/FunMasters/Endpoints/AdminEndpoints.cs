@@ -99,6 +99,17 @@ public static class AdminEndpoints
             return Results.Json(result);
         });
 
+        // POST /api/admin/suggestions/{id}/finish-early
+        group.MapPost("/suggestions/{id:guid}/finish-early", async (
+            Guid id,
+            IAdminApiService service) =>
+        {
+            var result = await service.FinishEarlyAsync(id);
+            return result.Success
+                ? Results.Json(result)
+                : Results.Json(result, statusCode: result.ErrorMessage?.Contains("not found") == true ? 404 : 400);
+        });
+
         return group;
     }
 }

@@ -16,4 +16,5 @@ public interface IAdminApiService
     Task<List<SuggestionDto>> GetAllSuggestionsAsync();
     Task<ApiResult> UpdateSuggestionAsync(Guid id, AdminUpdateSuggestionRequest request);
     Task<ApiResult> RefreshQueueAsync();
+    Task<ApiResult> FinishEarlyAsync(Guid id);
 }

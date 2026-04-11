@@ -67,4 +67,11 @@ public class AdminApiService(HttpClient http) : IAdminApiService
         return await response.Content.ReadFromJsonAsync<ApiResult>()
             ?? ApiResult.Fail("Failed to refresh queue");
     }
+
+    public async Task<ApiResult> FinishEarlyAsync(Guid id)
+    {
+        var response = await http.PostAsync($"/api/admin/suggestions/{id}/finish-early", null);
+        return await response.Content.ReadFromJsonAsync<ApiResult>()
+            ?? ApiResult.Fail("Failed to finish early");
+    }
 }

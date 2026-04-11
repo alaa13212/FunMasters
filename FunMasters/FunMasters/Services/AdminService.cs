@@ -1,4 +1,5 @@
 using FunMasters.Data;
+using FunMasters.Shared;
 using FunMasters.Shared.DTOs;
 using FunMasters.Shared.Services;
 using Microsoft.AspNetCore.Identity;
@@ -239,6 +240,27 @@ public class AdminService(
         suggestion.CycleNumber = request.CycleNumber;
 
         await db.SaveChangesAsync();
+
+        return ApiResult.Ok();
+    }
+
+    public async Task<ApiResult> FinishEarlyAsync(Guid suggestionId)
+    {
+        var suggestion = await db.Suggestions.FindAsync(suggestionId);
+        if (suggestion == null)
+            return ApiResult.Fail("Suggestion not found");
+
+        if (suggestion.Status != SuggestionStatus.Active)
+            return ApiResult.Fail("Only active suggestions can be finished early");
+
+        if (suggestion.ActiveAtUtc == null)
+            return ApiResult.Fail("Suggestion has no active date");
+
+        suggestion.FinishedAtUtc = FunMastersTime.MidnightUtc3AsUtc(
+            (suggestion.ActiveAtUtc.Value + FunMastersTime.UtcPlus3).Date + TimeSpan.FromDays(7));
+
+        await db.SaveChangesAsync();
+        await queueManager.UpdateQueueAsync();
 
         return ApiResult.Ok();
     }

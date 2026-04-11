@@ -1,4 +1,4 @@
-﻿using FunMasters.Data;
+using FunMasters.Data;
 using FunMasters.Shared;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,24 +6,20 @@ namespace FunMasters.Services;
 
 public class QueueManager(ApplicationDbContext db, SteamPlaytimeService steamPlaytimeService)
 {
-    private static readonly TimeSpan GamePlayPeriod = TimeSpan.FromDays(14);
-    
     public async Task UpdateQueueAsync()
     {
-        var now = DateTime.UtcNow;
+        var now = FunMastersTime.UtcNow;
         var active = await db.Suggestions
             .Include(s => s.SuggestedBy)
             .FirstOrDefaultAsync(s => s.Status == SuggestionStatus.Active);
 
-        // Check if active game expired
-        if (active is { FinishedAtUtc: not null } && now.ToLocalTime().Date >= active.FinishedAtUtc.Value.ToLocalTime().Date)
+        if (active is { FinishedAtUtc: not null } && now >= active.FinishedAtUtc.Value)
         {
             active.Status = SuggestionStatus.Finished;
             await db.SaveChangesAsync();
             await steamPlaytimeService.CaptureAllPlaytimesOnFinishAsync(active.Id);
         }
 
-        // If there’s no active game, promote next one
         if (!await db.Suggestions.AnyAsync(s => s.Status == SuggestionStatus.Active))
         {
             Suggestion? next = await GetNextSuggestionAsync();
@@ -31,7 +27,6 @@ public class QueueManager(ApplicationDbContext db, SteamPlaytimeService steamPla
         }
         await db.SaveChangesAsync();
 
-        // Fill queue if needed
         await RebuildQueueAsync();
     }
     
@@ -52,14 +47,13 @@ public class QueueManager(ApplicationDbContext db, SteamPlaytimeService steamPla
             .OrderByDescending(s => s.FinishedAtUtc)
             .FirstOrDefaultAsync();
 
-
         int cycleOrder = 1;
-        DateTime referenceTime = DateTime.UtcNow.Date;
+        DateTime referenceTime = FunMastersTime.CurrentOrNextMidnightUtc3();
 
         if (lastGame?.SuggestedBy != null)
         {
             cycleOrder = lastGame.SuggestedBy.CycleOrder + 1;
-            referenceTime = lastGame.FinishedAtUtc ?? DateTime.UtcNow.Date;
+            referenceTime = lastGame.FinishedAtUtc ?? FunMastersTime.CurrentOrNextMidnightUtc3();
         }
 
         var orderedUsers = users
@@ -67,7 +61,6 @@ public class QueueManager(ApplicationDbContext db, SteamPlaytimeService steamPla
             .ThenBy(u => u.CycleOrder)
             .ToList();
         
-        // For each user that doesn't have one queued, pick their earliest pending
         foreach (var user in orderedUsers)
         {
             var pending = await db.Suggestions
@@ -83,12 +76,11 @@ public class QueueManager(ApplicationDbContext db, SteamPlaytimeService steamPla
                 
             pending.Status = SuggestionStatus.Queued;
             pending.ActiveAtUtc = referenceTime;
-            referenceTime += GamePlayPeriod;
+            referenceTime += FunMastersTime.GamePlayPeriod;
             pending.FinishedAtUtc = referenceTime;
                 
-            if(pending.ActiveAtUtc < DateTime.UtcNow && pending.FinishedAtUtc > DateTime.UtcNow)
+            if(pending.ActiveAtUtc < FunMastersTime.UtcNow && pending.FinishedAtUtc > FunMastersTime.UtcNow)
                 pending.Status = SuggestionStatus.Active;
-            
         }
         
         await db.SaveChangesAsync();

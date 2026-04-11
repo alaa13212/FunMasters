@@ -15,6 +15,17 @@ public class QueueManagerJob : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        var now = DateTime.UtcNow;
+        var minutesPastHour = now.Minute;
+        var secondsPastMinute = now.Second;
+        var alignmentDelay = Interval - TimeSpan.FromMinutes(minutesPastHour) - TimeSpan.FromSeconds(secondsPastMinute) + TimeSpan.FromSeconds(1);
+
+        _logger.LogInformation("QueueManagerJob: aligning to top-of-hour in {Delay}", alignmentDelay);
+
+        await Task.Delay(alignmentDelay, stoppingToken);
+
+        using var timer = new PeriodicTimer(Interval);
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -28,10 +39,7 @@ public class QueueManagerJob : BackgroundService
                 _logger.LogError(ex, "Error updating queue");
             }
 
-            await Task.Delay(Interval, stoppingToken);
+            await timer.WaitForNextTickAsync(stoppingToken);
         }
     }
-
-
-
 }
