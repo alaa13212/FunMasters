@@ -21,6 +21,16 @@ public class QuarterlyDigestJob : BackgroundService
         while (!stoppingToken.IsCancellationRequested)
         {
             var delay = GetDelayUntilNextQuarterStart();
+            // Task.Delay doesn't accept values larger than int.MaxValue ms (~24.8 days)
+            var maxDelay = TimeSpan.FromDays(1);
+            while (delay > maxDelay && !stoppingToken.IsCancellationRequested)
+            {
+                await Task.Delay(maxDelay, stoppingToken);
+                delay = GetDelayUntilNextQuarterStart();
+            }
+
+            if (stoppingToken.IsCancellationRequested) break;
+
             await Task.Delay(delay, stoppingToken);
 
             try

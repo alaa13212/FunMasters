@@ -36,39 +36,6 @@ public class LucianGalade(TelegramService telegram, ApplicationDbContext db, ILo
             logger.LogWarning(ex, "Failed to send Telegram notification");
         }
     }
-    
-    public async Task SendGameRotationAsync(
-        string outgoingTitle,
-        IEnumerable<(string UserName, int PlaytimeMinutes)> outgoingPlaytimes,
-        string incomingTitle,
-        string incomingSuggester,
-        string? incomingSteamLink)
-    {
-        var sb = new System.Text.StringBuilder();
-
-        sb.AppendLine("Esteemed members of the <b>Council of Fun Masters</b>,\n");
-        sb.AppendLine($"The Council's deliberation of <b>{Escape(outgoingTitle)}</b> has concluded.\n");
-
-        var playtimes = outgoingPlaytimes.ToList();
-        if (playtimes.Count > 0)
-        {
-            sb.AppendLine("Final playtime standings:");
-            foreach (var (userName, minutes) in playtimes.OrderByDescending(p => p.PlaytimeMinutes))
-                sb.AppendLine($"  ▪ {Escape(userName)}: {FormatPlaytime(minutes)}");
-            sb.AppendLine();
-        }
-
-        sb.AppendLine($"The gavel falls. The next title before the Council is <b>{Escape(incomingTitle)}</b>, " +
-                      $"nominated by {Escape(incomingSuggester)}.");
-
-        if (!string.IsNullOrWhiteSpace(incomingSteamLink))
-            sb.AppendLine(incomingSteamLink);
-
-        sb.AppendLine("\nMay your deliberations be thorough.");
-        sb.Append("\n<i>— Lucian Galade, Chief of Staff</i>");
-
-        await SendSafeAsync(sb.ToString());
-    }
 
     public async Task SendRatingReminderAsync(
         string gameTitle,
