@@ -29,7 +29,7 @@ public class LucianGalade(TelegramService telegram, ApplicationDbContext db, ILo
     {
         try
         {
-            await telegram.SendMessageAsync(message);
+            // await telegram.SendMessageAsync(message);
         }
         catch (Exception ex)
         {
@@ -308,7 +308,8 @@ public class LucianGalade(TelegramService telegram, ApplicationDbContext db, ILo
         sb.AppendLine("\nThe Council may wish they had acted sooner.");
         sb.Append("\n<i>— Lucian Galade, Chief of Staff</i>");
 
-        await SendSafeAsync(sb.ToString());
+        // await SendSafeAsync(sb.ToString());
+        await telegram.SendMessageAsync(sb.ToString());
     }
 
     public async Task SendGameFreeAsync(string gameTitle, string steamLink)
