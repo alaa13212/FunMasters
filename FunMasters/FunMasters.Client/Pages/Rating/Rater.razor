@@ -1,3 +1,4 @@
+@using FunMasters.Client.Components
 @inject IRatingApiService RatingApi
 
 @if (NeedsRating is { Count: > 0 })
@@ -15,7 +16,7 @@
                     </figure>
                     <div class="card-body">
                         <h3 class="text-xl mb-0 text-primary">@game.Title</h3>
-                        Suggested By<br/><strong><img src="@game.SuggestedByAvatarUrl" class="md:ms-1 me-1 my-2 w-6 h-6 mask mask-squircle"/> @game.SuggestedByUserName</strong>
+                        Suggested By<br/><strong><img src="@game.SuggestedByAvatarUrl" class="md:ms-1 me-1 my-2 w-6 h-6 mask mask-squircle"/> <a href="/funmaster/@game.SuggestedById">@game.SuggestedByUserName</a><UserBadgeDisplay Badges="@game.SuggestedByBadges" UserId="@game.SuggestedById" SizePx="16"/></strong>
                         <span class="divider">My Rating</span>
                         <ReviewForm Model="ratingModel.Form"
                                     FormName="@("rate-" + game.Id.ToString("n"))"

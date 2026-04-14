@@ -99,6 +99,7 @@ builder.Services.AddScoped<SteamPlaytimeService>();
 builder.Services.AddScoped<ISteamApiService, SteamApiService>();
 builder.Services.AddScoped<GameCoverStorage>();
 builder.Services.AddScoped<AvatarStorage>();
+builder.Services.AddScoped<BadgeStorage>();
 builder.Services.AddScoped<QueueManager>();
 builder.Services.AddScoped<LucianGalade>();
 

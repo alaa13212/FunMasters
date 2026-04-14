@@ -146,7 +146,7 @@ public class RatingService(
 
         var cutoff = suggestion.ActiveAtUtc ?? suggestion.FinishedAtUtc!.Value;
         var eligibleMemberIds = await db.Users
-            .Where(u => u.CycleOrder > 0 && u.RegistrationDateUtc <= cutoff)
+            .Where(u => u.CycleOrder > 0 && CouncilStatusRoles.MustReview.Contains(u.CouncilStatus) && u.RegistrationDateUtc <= cutoff)
             .Select(u => u.Id)
             .ToListAsync();
 

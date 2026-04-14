@@ -50,7 +50,7 @@ public class SteamDiscountJob : BackgroundService
             .ToListAsync(stoppingToken);
 
         var activeMembers = await db.Users
-            .Where(u => u.CycleOrder > 0 && u.SteamId != null)
+            .Where(u => u.CycleOrder > 0 && CouncilStatusRoles.ReceiveNotifications.Contains(u.CouncilStatus) && u.SteamId != null)
             .ToListAsync(stoppingToken);
 
         var ownershipCache = new Dictionary<int, bool>();

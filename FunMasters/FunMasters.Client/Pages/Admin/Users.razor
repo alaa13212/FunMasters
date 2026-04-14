@@ -24,6 +24,7 @@
                             <th>Email</th>
                             <th>Display Name</th>
                             <th>Roles</th>
+                            <th>Status</th>
                             <th>Actions</th>
                         </tr>
                         </thead>
@@ -33,8 +34,28 @@
                             <tr>
                                 <td>@user.CycleOrder</td>
                                 <td>@user.Email</td>
-                                <td>@user.UserName</td>
+                                <td><a href="/funmaster/@user.Id">@user.UserName</a></td>
                                 <td>@string.Join(", ", user.Roles)</td>
+                                <td>
+                                    @switch (user.CouncilStatus)
+                                    {
+                                        case "Excommunicated":
+                                            <span class="badge badge-error badge-sm">Excommunicated</span>
+                                            break;
+                                        case "Executed":
+                                            <span class="badge badge-ghost badge-sm">Executed</span>
+                                            break;
+                                        case "Candidate":
+                                            <span class="badge badge-warning badge-sm">Candidate</span>
+                                            break;
+                                        case "Shadow":
+                                            <span class="badge badge-neutral badge-sm">Shadow</span>
+                                            break;
+                                        default:
+                                            <span class="badge badge-success badge-sm">Active</span>
+                                            break;
+                                    }
+                                </td>
                                 <td>
                                     <button class="btn btn-sm btn-secondary" @onclick="@(() => EditUser(user.Id))">Edit</button>
                                     <a class="btn btn-sm btn-warning" href="@($"/Admin/ChangeUserPassword/{user.Id}")">Change Password</a>

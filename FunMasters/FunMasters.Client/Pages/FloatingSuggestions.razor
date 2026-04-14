@@ -1,4 +1,5 @@
 @page "/game-suggestions"
+@using FunMasters.Client.Components
 @inject ISuggestionApiService SuggestionApi
 
 <PageTitle>Game Suggestions</PageTitle>
@@ -26,7 +27,7 @@
                         </h3>
                         <p class="grow"></p>
                         <p class="grow-0">
-                            Suggested By<br/><strong><img src="@game.SuggestedByAvatarUrl" class="md:ms-1 me-1 my-2 w-6 h-6 mask mask-squircle"/> @game.SuggestedByUserName</strong>
+                            Suggested By<br/><strong><img src="@game.SuggestedByAvatarUrl" class="md:ms-1 me-1 my-2 w-6 h-6 mask mask-squircle"/> <a href="/funmaster/@game.SuggestedById" @onclick:stopPropagation>@game.SuggestedByUserName</a><UserBadgeDisplay Badges="@game.SuggestedByBadges" UserId="@game.SuggestedById" SizePx="16"/></strong>
                         </p>
                         <a href="game/@game.Id" class="absolute inset-0"></a>
                     </div>

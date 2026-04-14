@@ -16,7 +16,13 @@ public sealed class ApplicationUser : IdentityUser<Guid>
     
     public ICollection<SteamPlaytime> SteamPlaytimes { get; set; } = [];
     
+    public string? Bio { get; set; }
+    public CouncilStatus CouncilStatus { get; set; } = CouncilStatus.Active;
+    
     public ICollection<Suggestion> Suggestions { get; set; } = [];
+    public ICollection<UserBadge> UserBadges { get; set; } = [];
+    public ICollection<FunMasterComment> ReceivedComments { get; set; } = [];
+    public ICollection<FunMasterComment> WrittenComments { get; set; } = [];
     
     
     public ApplicationUser()

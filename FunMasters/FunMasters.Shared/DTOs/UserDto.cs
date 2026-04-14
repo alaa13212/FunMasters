@@ -8,4 +8,6 @@ public class UserDto
     public int CycleOrder { get; set; }
     public List<string> Roles { get; set; } = [];
     public string? AvatarUrl { get; set; }
+    public string CouncilStatus { get; set; } = "Active";
+    public List<UserBadgeDto> Badges { get; set; } = [];
 }

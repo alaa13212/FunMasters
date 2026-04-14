@@ -6,4 +6,5 @@ public class UpdateUserRequest
     public string UserName { get; set; } = null!;
     public int CycleOrder { get; set; }
     public bool IsAdmin { get; set; }
+    public string? CouncilStatus { get; set; }
 }

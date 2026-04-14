@@ -1,0 +1,177 @@
+﻿@page "/admin/badges"
+@attribute [Authorize(Roles = "Admin")]
+@inject IAdminApiService AdminApi
+@inject NavigationManager Nav
+
+<PageTitle>Manage Badges</PageTitle>
+
+<div class="m-5">
+    @if (_loading)
+    {
+        <p>Loading...</p>
+    }
+    else
+    {
+        <h3 class="text-2xl text-center mb-4">Manage Badges</h3>
+
+        <div class="card bg-base-200 shadow-md mb-6">
+            <div class="card-body">
+                <h4 class="card-title">Create New Badge</h4>
+                <EditForm Model="_newBadge" OnValidSubmit="CreateBadge" FormName="CreateBadge" class="flex flex-col gap-4 max-w-sm">
+                    <label class="floating-label">
+                        <span>Name</span>
+                        <InputText class="input" @bind-Value="_newBadge.Name"/>
+                    </label>
+                    <label class="floating-label">
+                        <span>Description</span>
+                        <InputText class="input" @bind-Value="_newBadge.Description"/>
+                    </label>
+                    <label class="form-control">
+                        <span class="label-text">Badge Image</span>
+                        <InputFile OnChange="OnNewBadgeFileSelected" accept=".jpg,.jpeg,.png,.gif,.webp,.svg" class="file-input file-input-bordered"/>
+                    </label>
+                    @if (_newBadge.SelectedFile != null)
+                    {
+                        <p class="text-sm opacity-70">Selected: @_newBadge.SelectedFile.Name</p>
+                    }
+                    @if (!string.IsNullOrEmpty(_createError))
+                    {
+                        <div class="alert alert-error">@_createError</div>
+                    }
+                    <button type="submit" class="btn btn-primary" disabled="@_creating">
+                        @if (_creating)
+                        {
+                            <span class="loading loading-spinner"></span>
+                        }
+                        Create Badge
+                    </button>
+                </EditForm>
+            </div>
+        </div>
+
+        @if (BadgesList is { Count: > 0 })
+        {
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                @foreach (var badge in BadgesList)
+                {
+                    <div class="card bg-base-200 shadow-md">
+                        <div class="card-body">
+                            <div class="flex items-center gap-3">
+                                @if (!string.IsNullOrEmpty(badge.ImageUrl))
+                                {
+                                    <img src="@badge.ImageUrl" alt="@badge.Name" class="w-12 h-12 object-contain"/>
+                                }
+                                else
+                                {
+                                    <div class="w-12 h-12 bg-base-300 rounded flex items-center justify-center text-xs">No Image</div>
+                                }
+                                <div>
+                                    <h5 class="font-bold">@badge.Name</h5>
+                                    @if (!string.IsNullOrEmpty(badge.Description))
+                                    {
+                                        <p class="text-sm opacity-70">@badge.Description</p>
+                                    }
+                                </div>
+                            </div>
+                            <div class="card-actions mt-2">
+                                <button class="btn btn-sm btn-warning" @onclick="() => EditBadge(badge)">Edit</button>
+                                <button class="btn btn-sm btn-danger" @onclick="() => DeleteBadge(badge.Id)" disabled="@_deleting">Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="text-center opacity-70">No badges created yet.</p>
+        }
+    }
+</div>
+
+@code {
+    [PersistentState] public List<BadgeDto>? BadgesList { get; set; }
+    private bool _loading = true;
+    private bool _creating;
+    private bool _deleting;
+    private string? _createError;
+
+    private NewBadgeModel _newBadge = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            BadgesList ??= await AdminApi.GetBadgesAsync();
+        }
+        catch (Exception) { }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task CreateBadge()
+    {
+        if (string.IsNullOrWhiteSpace(_newBadge.Name)) return;
+        _creating = true;
+        _createError = null;
+        try
+        {
+            Stream? fileStream = null;
+            string? fileName = null;
+            if (_newBadge.SelectedFile != null)
+            {
+                var ms = new MemoryStream();
+                await _newBadge.SelectedFile.OpenReadStream(2 * 1024 * 1024).CopyToAsync(ms);
+                ms.Position = 0;
+                fileStream = ms;
+                fileName = _newBadge.SelectedFile.Name;
+            }
+
+            var result = await AdminApi.CreateBadgeAsync(_newBadge.Name, _newBadge.Description, fileStream, fileName);
+            if (result.Success)
+            {
+                _newBadge = new NewBadgeModel();
+                BadgesList = await AdminApi.GetBadgesAsync();
+            }
+            else
+            {
+                _createError = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex) { _createError = ex.Message; }
+        finally { _creating = false; }
+    }
+
+    private void OnNewBadgeFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file.Size > 2 * 1024 * 1024) return;
+        _newBadge.SelectedFile = file;
+    }
+
+    private void EditBadge(BadgeDto badge)
+    {
+        Nav.NavigateTo($"/admin/badges/edit/{badge.Id}");
+    }
+
+    private async Task DeleteBadge(Guid badgeId)
+    {
+        _deleting = true;
+        try
+        {
+            await AdminApi.DeleteBadgeAsync(badgeId);
+            BadgesList = await AdminApi.GetBadgesAsync();
+        }
+        catch { }
+        finally { _deleting = false; }
+    }
+
+    public class NewBadgeModel
+    {
+        public string Name { get; set; } = "";
+        public string? Description { get; set; }
+        public IBrowserFile? SelectedFile { get; set; }
+    }
+}

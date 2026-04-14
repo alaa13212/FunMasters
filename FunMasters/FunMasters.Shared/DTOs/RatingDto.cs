@@ -7,6 +7,7 @@ public class RatingDto
     public Guid RaterId { get; set; }
     public string RaterUserName { get; set; } = null!;
     public string? RaterAvatarUrl { get; set; }
+    public List<UserBadgeDto> RaterBadges { get; set; } = [];
     public int Score { get; set; }
     public decimal DecimalScore => Score / 10m;
     public string? Comment { get; set; }

@@ -51,7 +51,7 @@ public class PlaytimeMilestoneJob : BackgroundService
         if (appId == null) return;
 
         var members = await db.Users
-            .Where(u => u.CycleOrder > 0 && u.SteamId != null)
+            .Where(u => u.CycleOrder > 0 && CouncilStatusRoles.ReceiveNotifications.Contains(u.CouncilStatus) && u.SteamId != null)
             .ToListAsync(stoppingToken);
 
         foreach (var member in members)

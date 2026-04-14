@@ -12,6 +12,7 @@ public class AdminService(
     UserManager<ApplicationUser> userManager,
     GameCoverStorage coverStorage,
     AvatarStorage avatarStorage,
+    BadgeStorage badgeStorage,
     QueueManager queueManager,
     LucianGalade lucianGalade) : IAdminApiService
 {
@@ -21,6 +22,8 @@ public class AdminService(
     public async Task<List<UserDto>> GetUsersAsync()
     {
         var users = await userManager.Users
+            .Include(u => u.UserBadges)
+            .ThenInclude(ub => ub.Badge)
             .OrderBy(u => u.CycleOrder)
             .ToListAsync();
 
@@ -28,15 +31,7 @@ public class AdminService(
         foreach (var user in users)
         {
             var roles = await userManager.GetRolesAsync(user);
-            userDtos.Add(new UserDto
-            {
-                Id = user.Id,
-                Email = user.Email!,
-                UserName = user.UserName!,
-                CycleOrder = user.CycleOrder,
-                Roles = roles.ToList(),
-                AvatarUrl = avatarStorage.GetPublicUrl(user.Id)
-            });
+            userDtos.Add(MapToUserDto(user, roles));
         }
 
         return userDtos;
@@ -44,11 +39,19 @@ public class AdminService(
 
     public async Task<UserDto?> GetUserAsync(Guid userId)
     {
-        var user = await userManager.FindByIdAsync(userId.ToString());
+        var user = await userManager.Users
+            .Include(u => u.UserBadges)
+            .ThenInclude(ub => ub.Badge)
+            .FirstOrDefaultAsync(u => u.Id == userId);
         if (user == null)
             return null;
 
         var roles = await userManager.GetRolesAsync(user);
+        return MapToUserDto(user, roles);
+    }
+
+    private UserDto MapToUserDto(ApplicationUser user, IList<string> roles)
+    {
         return new UserDto
         {
             Id = user.Id,
@@ -56,7 +59,15 @@ public class AdminService(
             UserName = user.UserName!,
             CycleOrder = user.CycleOrder,
             Roles = roles.ToList(),
-            AvatarUrl = avatarStorage.GetPublicUrl(user.Id)
+            AvatarUrl = avatarStorage.GetPublicUrl(user.Id),
+            CouncilStatus = user.CouncilStatus.ToString(),
+            Badges = user.UserBadges.Select(ub => new UserBadgeDto
+            {
+                BadgeId = ub.BadgeId,
+                Name = ub.Badge.Name,
+                Description = ub.Badge.Description,
+                ImageUrl = badgeStorage.GetPublicUrl(ub.BadgeId)
+            }).ToList()
         };
     }
 
@@ -130,6 +141,12 @@ public class AdminService(
         user.Email = request.Email;
         user.UserName = request.UserName;
         user.CycleOrder = request.CycleOrder;
+
+        // Update council status if provided
+        if (!string.IsNullOrEmpty(request.CouncilStatus) && Enum.TryParse<CouncilStatus>(request.CouncilStatus, out var status))
+        {
+            user.CouncilStatus = status;
+        }
 
         var result = await userManager.UpdateAsync(user);
         if (!result.Succeeded)
@@ -294,5 +311,142 @@ public class AdminService(
         {
             return ApiResult.Fail($"Failed to refresh queue: {ex.Message}");
         }
+    }
+
+    // Badge management
+    public async Task<List<BadgeDto>> GetBadgesAsync()
+    {
+        return await db.Badges.Select(b => new BadgeDto
+        {
+            Id = b.Id,
+            Name = b.Name,
+            Description = b.Description,
+            ImageUrl = badgeStorage.GetPublicUrl(b.Id)
+        }).ToListAsync();
+    }
+
+    public async Task<ApiResult<Guid>> CreateBadgeAsync(string name, string? description, Stream? fileStream, string? fileName)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return ApiResult<Guid>.Fail("Badge name is required");
+
+        var badge = new Badge
+        {
+            Name = name,
+            Description = description
+        };
+
+        db.Badges.Add(badge);
+        await db.SaveChangesAsync();
+
+        if (fileStream != null && !string.IsNullOrEmpty(fileName))
+        {
+            var extension = Path.GetExtension(fileName).ToLowerInvariant();
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg" };
+            if (!allowedExtensions.Contains(extension))
+                return ApiResult<Guid>.Fail("Invalid file type. Allowed types: jpg, jpeg, png, gif, webp, svg");
+
+            if (fileStream.Length > 2 * 1024 * 1024)
+                return ApiResult<Guid>.Fail("File size must be less than 2MB");
+
+            await badgeStorage.SaveBadgeImageAsync(fileStream, badge.Id);
+        }
+
+        return ApiResult<Guid>.Ok(badge.Id);
+    }
+
+    public async Task<ApiResult> UpdateBadgeAsync(Guid id, UpdateBadgeRequest request)
+    {
+        var badge = await db.Badges.FindAsync(id);
+        if (badge == null)
+            return ApiResult.Fail("Badge not found");
+
+        badge.Name = request.Name;
+        badge.Description = request.Description;
+        await db.SaveChangesAsync();
+
+        return ApiResult.Ok();
+    }
+
+    public async Task<ApiResult> DeleteBadgeAsync(Guid id)
+    {
+        var badge = await db.Badges.Include(b => b.UserBadges).FirstOrDefaultAsync(b => b.Id == id);
+        if (badge == null)
+            return ApiResult.Fail("Badge not found");
+
+        if (badge.UserBadges.Count > 0)
+            return ApiResult.Fail("Cannot delete badge that is assigned to users");
+
+        db.Badges.Remove(badge);
+        await db.SaveChangesAsync();
+
+        return ApiResult.Ok();
+    }
+
+    public async Task<ApiResult> UploadBadgeImageAsync(Guid id, Stream fileStream, string fileName)
+    {
+        var badge = await db.Badges.FindAsync(id);
+        if (badge == null)
+            return ApiResult.Fail("Badge not found");
+
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg" };
+        if (!allowedExtensions.Contains(extension))
+            return ApiResult.Fail("Invalid file type. Allowed types: jpg, jpeg, png, gif, webp, svg");
+
+        if (fileStream.Length > 2 * 1024 * 1024)
+            return ApiResult.Fail("File size must be less than 2MB");
+
+        try
+        {
+            await badgeStorage.SaveBadgeImageAsync(fileStream, id);
+            return ApiResult.Ok();
+        }
+        catch (Exception ex)
+        {
+            return ApiResult.Fail($"Failed to upload badge image: {ex.Message}");
+        }
+    }
+
+    public async Task<ApiResult> AssignBadgeAsync(Guid userId, Guid badgeId)
+    {
+        var user = await userManager.Users
+            .Include(u => u.UserBadges)
+            .FirstOrDefaultAsync(u => u.Id == userId);
+        if (user == null)
+            return ApiResult.Fail("User not found");
+
+        var badge = await db.Badges.FindAsync(badgeId);
+        if (badge == null)
+            return ApiResult.Fail("Badge not found");
+
+        if (user.UserBadges.Count >= 2)
+            return ApiResult.Fail("User already has the maximum of 2 badges");
+
+        if (user.UserBadges.Any(ub => ub.BadgeId == badgeId))
+            return ApiResult.Fail("Badge already assigned to this user");
+
+        db.UserBadges.Add(new UserBadge
+        {
+            UserId = userId,
+            BadgeId = badgeId
+        });
+
+        await db.SaveChangesAsync();
+        return ApiResult.Ok();
+    }
+
+    public async Task<ApiResult> RemoveBadgeAsync(Guid userId, Guid badgeId)
+    {
+        var userBadge = await db.UserBadges
+            .FirstOrDefaultAsync(ub => ub.UserId == userId && ub.BadgeId == badgeId);
+
+        if (userBadge == null)
+            return ApiResult.Fail("Badge not assigned to this user");
+
+        db.UserBadges.Remove(userBadge);
+        await db.SaveChangesAsync();
+
+        return ApiResult.Ok();
     }
 }

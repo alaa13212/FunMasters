@@ -124,7 +124,7 @@ public class WeeklyDigestJob : BackgroundService
             .ToListAsync(stoppingToken);
 
         var activeMemberIds = await db.Users
-            .Where(u => u.CycleOrder > 0)
+            .Where(u => u.CycleOrder > 0 && CouncilStatusRoles.ReceiveNotifications.Contains(u.CouncilStatus))
             .Select(u => u.Id)
             .ToListAsync(stoppingToken);
 

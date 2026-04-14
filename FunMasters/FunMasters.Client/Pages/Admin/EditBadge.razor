@@ -1,0 +1,172 @@
+﻿@page "/admin/badges/edit/{id}"
+@attribute [Authorize(Roles = "Admin")]
+@inject IAdminApiService AdminApi
+@inject NavigationManager Nav
+
+<PageTitle>Edit Badge</PageTitle>
+
+<div class="m-5">
+    <h3 class="text-2xl text-center md-5">Edit Badge</h3>
+
+    <div class="card bg-base-200 shadow-sm">
+        <div class="card-body">
+
+            @if (_loading)
+            {
+                <p><em>Loading...</em></p>
+            }
+            else if (Model == null)
+            {
+                <div class="alert alert-error">Badge not found</div>
+            }
+            else
+            {
+                <EditForm Model="Model" OnValidSubmit="HandleValidSubmit" FormName="EditBadge" class="flex flex-col gap-4 w-sm">
+                    <DataAnnotationsValidator/>
+
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-error">@_errorMessage</div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(_imageUrl))
+                    {
+                        <div class="flex items-center gap-3">
+                            <img src="@_imageUrl" alt="@Model.Name" class="w-16 h-16 object-contain"/>
+                        </div>
+                    }
+
+                    <label class="form-control">
+                        <span class="label-text">Badge Image</span>
+                        <InputFile OnChange="OnFileSelected" accept=".jpg,.jpeg,.png,.gif,.webp,.svg" class="file-input file-input-bordered"/>
+                    </label>
+                    @if (_selectedFile != null)
+                    {
+                        <p class="text-sm opacity-70">Selected: @_selectedFile.Name</p>
+                    }
+
+                    <label class="floating-label">
+                        <span>Name</span>
+                        <InputText class="input" @bind-Value="Model.Name"/>
+                    </label>
+
+                    <label class="floating-label">
+                        <span>Description</span>
+                        <InputText class="input" @bind-Value="Model.Description"/>
+                    </label>
+
+                    <div>
+                        <button type="submit" class="btn btn-primary" disabled="@_isSubmitting">
+                            @if (_isSubmitting)
+                            {
+                                <span class="loading loading-spinner"></span>
+                            }
+                            Save Changes
+                        </button>
+                        <button class="btn btn-secondary ms-2" @onclick="@(() => Nav.NavigateTo("/admin/badges"))">Cancel</button>
+                    </div>
+                </EditForm>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? Id { get; set; }
+
+    [PersistentState] public EditModel? Model { get; set; }
+    private bool _loading = true;
+    private bool _isSubmitting;
+    private string? _errorMessage;
+    private string? _imageUrl;
+    private IBrowserFile? _selectedFile;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id is null || !Guid.TryParse(Id, out _))
+        {
+            Nav.NavigateTo("/admin/badges");
+            return;
+        }
+
+        try
+        {
+            if (Model == null)
+            {
+                var badges = await AdminApi.GetBadgesAsync();
+                var badge = badges.FirstOrDefault(b => b.Id == Guid.Parse(Id!));
+                if (badge == null)
+                {
+                    Nav.NavigateTo("/admin/badges");
+                    return;
+                }
+
+                Model = new EditModel
+                {
+                    Name = badge.Name,
+                    Description = badge.Description
+                };
+                _imageUrl = badge.ImageUrl;
+            }
+        }
+        catch (Exception) { }
+        finally { _loading = false; }
+    }
+
+    private void OnFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file.Size > 2 * 1024 * 1024) return;
+        _selectedFile = file;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (Model is null || Id is null || !Guid.TryParse(Id, out var badgeId))
+            return;
+
+        _errorMessage = null;
+        _isSubmitting = true;
+
+        try
+        {
+            if (_selectedFile != null)
+            {
+                var ms = new MemoryStream();
+                await _selectedFile.OpenReadStream(2 * 1024 * 1024).CopyToAsync(ms);
+                ms.Position = 0;
+                var uploadResult = await AdminApi.UploadBadgeImageAsync(badgeId, ms, _selectedFile.Name);
+                if (!uploadResult.Success)
+                {
+                    _errorMessage = uploadResult.ErrorMessage ?? "Failed to upload image";
+                    return;
+                }
+            }
+
+            var result = await AdminApi.UpdateBadgeAsync(badgeId, new UpdateBadgeRequest
+            {
+                Name = Model.Name,
+                Description = Model.Description
+            });
+
+            if (result.Success)
+                Nav.NavigateTo("/admin/badges");
+            else
+                _errorMessage = result.ErrorMessage ?? "Failed to update badge";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    public class EditModel
+    {
+        public string Name { get; set; } = "";
+        public string? Description { get; set; }
+    }
+}

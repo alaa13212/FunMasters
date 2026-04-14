@@ -1,5 +1,6 @@
 @page "/game/active"
 @page "/game/{Id:guid}"
+@using FunMasters.Client.Components
 @using System.Security.Claims
 @inject ISuggestionApiService SuggestionApi
 @inject IRatingApiService RatingApi
@@ -40,8 +41,9 @@
                         <div class="h-max">
                             Suggested By
                             <br/>
-                            <strong class="text-lg"><img src="@Game.Suggestion.SuggestedByAvatarUrl"
-                                                         class="md:ms-1 me-1 my-2 w-10 h-10 mask mask-squircle"/> @Game.Suggestion.SuggestedByUserName
+                            <strong class="text-lg my-2 flex flex-row gap-3 items-center"><img src="@Game.Suggestion.SuggestedByAvatarUrl" class="md:ms-1  my-2 w-10 h-10 mask mask-squircle"/>
+                                <a href="/funmaster/@Game.Suggestion.SuggestedById">@Game.Suggestion.SuggestedByUserName</a>
+                                <UserBadgeDisplay Badges="@Game.Suggestion.SuggestedByBadges" UserId="@Game.Suggestion.SuggestedById" SizePx="28"/>
                             </strong>
                         </div>
                         <div class="flex flex-wrap gap-2 justify-end">
@@ -128,7 +130,7 @@
                                     <div class="flex flex-row">
                                         <img src="@rating.RaterAvatarUrl" class="me-2 w-25 h-25 mask mask-squircle"/>
                                         <div class="flex flex-col gap-2">
-                                            <h5 class="text-xl underline">@rating.RaterUserName</h5>
+                                            <h5 class="text-xl underline"><a href="/funmaster/@rating.RaterId">@rating.RaterUserName</a><UserBadgeDisplay Badges="@rating.RaterBadges" UserId="@rating.RaterId" SizePx="18"/></h5>
                                             <RatingStars Rating="@rating.DecimalScore" class="text-3xl"/>
                                             @if (rating.PlaytimeForeverMinutes.HasValue || rating.Playtime2WeeksMinutes.HasValue)
                                             {

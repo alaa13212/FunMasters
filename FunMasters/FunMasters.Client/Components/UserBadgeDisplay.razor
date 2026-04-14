@@ -1,0 +1,25 @@
+﻿@namespace FunMasters.Client.Components
+
+@if (Badges is { Count: > 0 })
+{
+    @foreach (var badge in Badges)
+    {
+        var tip = string.IsNullOrEmpty(badge.Description) ? badge.Name : $"{badge.Name} - {badge.Description}";
+        <a href="/funmaster/@UserId"
+           class="inline-flex items-center tooltip"
+           data-tip="@tip"
+           @onclick:stopPropagation>
+            <img src="@badge.ImageUrl" alt="@badge.Name"
+                 style="width: @(_sizePx)px; height: @(_sizePx)px;"
+                 class="object-contain inline-block"/>
+        </a>
+    }
+}
+
+@code {
+    [Parameter] public List<UserBadgeDto>? Badges { get; set; }
+    [Parameter] public Guid UserId { get; set; }
+    [Parameter] public int SizePx { get; set; } = 20;
+
+    private int _sizePx => SizePx;
+}

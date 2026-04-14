@@ -9,6 +9,7 @@ public class SuggestionDto
     public Guid SuggestedById { get; set; }
     public string? SuggestedByAvatarUrl { get; set; }
     public string SuggestedByUserName { get; set; } = null!;
+    public List<UserBadgeDto> SuggestedByBadges { get; set; } = [];
     public DateTime CreatedAtUtc { get; set; }
     public string? SteamLink { get; set; }
     public DateTime? ActiveAtUtc { get; set; }

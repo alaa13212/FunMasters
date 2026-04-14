@@ -47,4 +47,23 @@ public class AccountApiService(HttpClient http) : IAccountApiService
         return await response.Content.ReadFromJsonAsync<ApiResult<string>>()
             ?? ApiResult<string>.Fail("Failed to upload avatar");
     }
+
+    public async Task<FunMasterProfileDto?> GetFunMasterProfileAsync(Guid userId)
+    {
+        return await http.GetFromJsonAsync<FunMasterProfileDto>($"/api/account/funmaster/{userId}");
+    }
+
+    public async Task<ApiResult> AddFunMasterCommentAsync(Guid targetUserId, CreateFunMasterCommentRequest request)
+    {
+        var response = await http.PostAsJsonAsync($"/api/account/funmaster/{targetUserId}/comments", request);
+        return await response.Content.ReadFromJsonAsync<ApiResult>()
+            ?? ApiResult.Fail("Failed to add comment");
+    }
+
+    public async Task<ApiResult> DeleteFunMasterCommentAsync(Guid commentId)
+    {
+        var response = await http.DeleteAsync($"/api/account/funmaster/comments/{commentId}");
+        return await response.Content.ReadFromJsonAsync<ApiResult>()
+            ?? ApiResult.Fail("Failed to delete comment");
+    }
 }

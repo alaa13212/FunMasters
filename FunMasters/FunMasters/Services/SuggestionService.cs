@@ -11,6 +11,7 @@ public class SuggestionService(
     ApplicationDbContext db,
     GameCoverStorage coverStorage,
     AvatarStorage avatarStorage,
+    BadgeStorage badgeStorage,
     QueueManager queueManager,
     SteamPlaytimeService steamPlaytimeService,
     LucianGalade lucianGalade,
@@ -20,6 +21,8 @@ public class SuggestionService(
     {
         var all = await db.Suggestions
             .Include(s => s.SuggestedBy)
+            .ThenInclude(u => u.UserBadges)
+            .ThenInclude(ub => ub.Badge)
             .Include(s => s.Ratings)
             .Where(s => s.Status != SuggestionStatus.Pending)
             .OrderBy(s => s.ActiveAtUtc)
@@ -49,6 +52,8 @@ public class SuggestionService(
 
         var suggestions = await db.Suggestions
             .Include(s => s.SuggestedBy)
+            .ThenInclude(u => u.UserBadges)
+            .ThenInclude(ub => ub.Badge)
             .Where(s => s.Status == SuggestionStatus.Pending && !s.IsHidden)
             .ToListAsync();
 
@@ -57,8 +62,8 @@ public class SuggestionService(
             .Distinct()
             .Max(u => u!.CycleOrder);
 
-        var suggestionsByUser = suggestions
-            .Where(s => s.SuggestedBy!.CycleOrder > 0)
+        var activeSuggestionsByUser = suggestions
+            .Where(s => s.SuggestedBy!.CycleOrder > 0 && CouncilStatusRoles.CanSuggest.Contains(s.SuggestedBy!.CouncilStatus))
             .GroupBy(s => s.SuggestedById)
             .Select(g => new
             {
@@ -69,10 +74,22 @@ public class SuggestionService(
             .OrderBy(x => x.User!.CycleOrder > cycleStart ? x.User!.CycleOrder - cycleStart : maxCycleOrder + x.User!.CycleOrder - cycleStart)
             .ToList();
 
+        // Excommunicated and Candidate suggestions shown at the end
+        var otherSuggestionsByUser = suggestions
+            .Where(s => CouncilStatusRoles.ExtraFloatingSuggestions.Contains(s.SuggestedBy!.CouncilStatus))
+            .GroupBy(s => s.SuggestedById)
+            .Select(g => new
+            {
+                UserId = g.Key,
+                User = g.First().SuggestedBy,
+                Suggestions = g.ToList()
+            })
+            .ToList();
+
         List<Suggestion> finalSort = [];
         do
         {
-            foreach (var userSuggestion in suggestionsByUser)
+            foreach (var userSuggestion in activeSuggestionsByUser)
             {
                 Suggestion? suggestion = userSuggestion.Suggestions.MinBy(s => s.Order);
                 if (suggestion != null)
@@ -82,10 +99,19 @@ public class SuggestionService(
                 }
             }
             
-            suggestionsByUser.RemoveAll(group => group.Suggestions.Count == 0);
-        } while (suggestionsByUser.Any());
+            activeSuggestionsByUser.RemoveAll(group => group.Suggestions.Count == 0);
+        } while (activeSuggestionsByUser.Any());
 
-        finalSort.AddRange(suggestions.Where(s => s.SuggestedBy!.CycleOrder < 1));
+        // Append Excommunicated/Candidate suggestions at the end
+        foreach (var userGroup in otherSuggestionsByUser)
+        {
+            foreach (var suggestion in userGroup.Suggestions.OrderBy(s => s.Order))
+            {
+                finalSort.Add(suggestion);
+            }
+        }
+
+        finalSort.AddRange(suggestions.Where(s => s.SuggestedBy!.CycleOrder < 1 || s.SuggestedBy!.CouncilStatus == CouncilStatus.Shadow));
         
         return finalSort.Select(MapToDto).ToList();
     }
@@ -94,8 +120,12 @@ public class SuggestionService(
     {
         var suggestion = await db.Suggestions
             .Include(s => s.SuggestedBy)
+            .ThenInclude(u => u.UserBadges)
+            .ThenInclude(ub => ub.Badge)
             .Include(s => s.Ratings)
             .ThenInclude(r => r.Rater)
+            .ThenInclude(u => u.UserBadges)
+            .ThenInclude(ub => ub.Badge)
             .FirstOrDefaultAsync(s => s.Id == id);
 
         if (suggestion == null) return null;
@@ -107,8 +137,12 @@ public class SuggestionService(
     {
         var suggestion = await db.Suggestions
             .Include(s => s.SuggestedBy)
+            .ThenInclude(u => u.UserBadges)
+            .ThenInclude(ub => ub.Badge)
             .Include(s => s.Ratings)
             .ThenInclude(r => r.Rater)
+            .ThenInclude(u => u.UserBadges)
+            .ThenInclude(ub => ub.Badge)
             .FirstOrDefaultAsync(s => s.Status == SuggestionStatus.Active);
 
         if (suggestion == null) return null;
@@ -332,6 +366,16 @@ public class SuggestionService(
 
     private SuggestionDto MapToDto(Suggestion suggestion)
     {
+        var suggesterBadges = suggestion.SuggestedBy != null
+            ? suggestion.SuggestedBy.UserBadges.Select(ub => new UserBadgeDto
+            {
+                BadgeId = ub.BadgeId,
+                Name = ub.Badge.Name,
+                Description = ub.Badge.Description,
+                ImageUrl = badgeStorage.GetPublicUrl(ub.BadgeId)
+            }).ToList()
+            : [];
+
         return new SuggestionDto
         {
             Id = suggestion.Id,
@@ -341,6 +385,7 @@ public class SuggestionService(
             SuggestedById = suggestion.SuggestedById,
             SuggestedByAvatarUrl = avatarStorage.GetPublicUrl(suggestion.SuggestedById),
             SuggestedByUserName = suggestion.SuggestedBy?.UserName ?? "",
+            SuggestedByBadges = suggesterBadges,
             CreatedAtUtc = suggestion.CreatedAtUtc,
             SteamLink = suggestion.SteamLink,
             ActiveAtUtc = suggestion.ActiveAtUtc,
@@ -378,6 +423,13 @@ public class SuggestionService(
                     RaterId = r.RaterId,
                     RaterUserName = r.Rater?.UserName ?? "",
                     RaterAvatarUrl = avatarStorage.GetPublicUrl(r.RaterId),
+                    RaterBadges = r.Rater?.UserBadges.Select(ub => new UserBadgeDto
+                    {
+                        BadgeId = ub.BadgeId,
+                        Name = ub.Badge.Name,
+                        Description = ub.Badge.Description,
+                        ImageUrl = badgeStorage.GetPublicUrl(ub.BadgeId)
+                    }).ToList() ?? [],
                     Score = r.Score,
                     Comment = r.Comment,
                     CreatedAtUtc = r.CreatedAtUtc,

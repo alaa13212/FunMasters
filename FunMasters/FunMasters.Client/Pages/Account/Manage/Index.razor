@@ -77,6 +77,12 @@ else if (_profile != null)
                             <p class="text-xs opacity-50 mt-1">Current Steam ID: @Input.SteamId</p>
                         }
                     </div>
+                    <div class="mb-1 mt-3">
+                        <label class="label text-sm font-semibold mb-1">Bio</label>
+                        <textarea class="textarea textarea-bordered w-full" rows="3"
+                                  @bind="Input.Bio"
+                                  placeholder="Tell other Fun Masters about yourself..." maxlength="500"></textarea>
+                    </div>
                     <div class="card-actions justify-stretch mt-3">
                         <button type="submit" class="btn btn-lg btn-primary w-full" disabled="@_isSaving">
                             @if (_isSaving)
@@ -115,6 +121,7 @@ else if (_profile != null)
                 Input.UserName ??= _profile.UserName;
                 Input.SteamId = _profile.SteamId;
                 Input.SteamInput ??= _profile.SteamId;
+                Input.Bio ??= _profile.Bio;
                 _lastVerifiedInput = _profile.SteamId;
             }
         }
@@ -202,7 +209,8 @@ else if (_profile != null)
             {
                 Email = Input.Email ?? "",
                 UserName = Input.UserName ?? "",
-                SteamId = Input.SteamId
+                SteamId = Input.SteamId,
+                Bio = Input.Bio
             };
 
             var result = await AccountApi.UpdateProfileAsync(request);
@@ -232,5 +240,6 @@ else if (_profile != null)
         public string? Email { get; set; }
         public string? SteamId { get; set; }
         public string? SteamInput { get; set; }
+        public string? Bio { get; set; }
     }
 }

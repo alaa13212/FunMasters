@@ -70,7 +70,7 @@ public class PlaytimeShamingJob : BackgroundService
         if (appId == null) return;
 
         var members = await db.Users
-            .Where(u => u.CycleOrder > 0 && u.SteamId != null)
+            .Where(u => u.CycleOrder > 0 && CouncilStatusRoles.ShamingNotifications.Contains(u.CouncilStatus) && u.SteamId != null)
             .ToListAsync(stoppingToken);
 
         var absentMembers = new List<string>();

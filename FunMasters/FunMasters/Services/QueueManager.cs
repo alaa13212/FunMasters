@@ -65,7 +65,10 @@ public class QueueManager(ApplicationDbContext db, SteamPlaytimeService steamPla
     
     public async Task RebuildQueueAsync()
     {
-        var users = await db.Users.Where(u => u.CycleOrder > 0).ToListAsync();
+        // Only active members participate in the queue
+        var users = await db.Users
+            .Where(u => u.CycleOrder > 0 && CouncilStatusRoles.InQueue.Contains(u.CouncilStatus))
+            .ToListAsync();
 
         var lastGame = await db.Suggestions
             .Where(s => s.Status == SuggestionStatus.Finished || s.Status == SuggestionStatus.Active)

@@ -49,18 +49,19 @@ public class RatingReminderJob : BackgroundService
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var lucian = scope.ServiceProvider.GetRequiredService<LucianGalade>();
 
-        var now = FunMastersTime.UtcNow;
-        var threeDaysAgo = now.AddDays(-3);
+        DateTime now = FunMastersTime.UtcNow;
+        DateTime threeDaysAgo = now.AddDays(-3);
+        DateTime tooOld = now.AddDays(-14);
 
         var finishedGames = await db.Suggestions
             .Include(s => s.Ratings)
             .ThenInclude(r => r.Rater)
             .Include(s => s.SuggestedBy)
-            .Where(s => s.Status == SuggestionStatus.Finished && s.FinishedAtUtc <= threeDaysAgo)
+            .Where(s => s.Status == SuggestionStatus.Finished && s.FinishedAtUtc <= threeDaysAgo && s.FinishedAtUtc >= tooOld)
             .ToListAsync(stoppingToken);
 
         var allActiveMembers = await db.Users
-            .Where(u => u.CycleOrder > 0)
+            .Where(u => u.CycleOrder > 0 && CouncilStatusRoles.MustReview.Contains(u.CouncilStatus))
             .ToListAsync(stoppingToken);
 
         foreach (var game in finishedGames)

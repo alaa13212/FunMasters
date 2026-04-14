@@ -110,6 +110,104 @@ public static class AdminEndpoints
                 : Results.Json(result, statusCode: result.ErrorMessage?.Contains("not found") == true ? 404 : 400);
         });
 
+        // Badge management
+        // GET /api/admin/badges
+        group.MapGet("/badges", async (IAdminApiService service) =>
+        {
+            var result = await service.GetBadgesAsync();
+            return Results.Ok(result);
+        });
+
+        // POST /api/admin/badges
+        group.MapPost("/badges", async (
+            HttpRequest request,
+            IAdminApiService service) =>
+        {
+            var form = await request.ReadFormAsync();
+            var name = form["name"].ToString();
+            var description = form["description"].ToString();
+            var file = form.Files.FirstOrDefault();
+
+            Stream? fileStream = null;
+            string? fileName = null;
+            if (file is { Length: > 0 })
+            {
+                fileStream = file.OpenReadStream();
+                fileName = file.FileName;
+            }
+
+            var result = await service.CreateBadgeAsync(name, description, fileStream, fileName);
+            return Results.Json(result);
+        });
+
+        // PUT /api/admin/badges/{id}
+        group.MapPut("/badges/{id:guid}", async (
+            Guid id,
+            [FromBody] UpdateBadgeRequest request,
+            IAdminApiService service) =>
+        {
+            var result = await service.UpdateBadgeAsync(id, request);
+            return result.Success
+                ? Results.Json(result)
+                : Results.Json(result, statusCode: 400);
+        });
+
+        // DELETE /api/admin/badges/{id}
+        group.MapDelete("/badges/{id:guid}", async (
+            Guid id,
+            IAdminApiService service) =>
+        {
+            var result = await service.DeleteBadgeAsync(id);
+            return result.Success
+                ? Results.Json(result)
+                : Results.Json(result, statusCode: 400);
+        });
+
+        // POST /api/admin/badges/{id}/image
+        group.MapPost("/badges/{id:guid}/image", async (
+            Guid id,
+            HttpRequest request,
+            IAdminApiService service) =>
+        {
+            if (!request.HasFormContentType || request.Form.Files.Count == 0)
+                return Results.Json(ApiResult.Fail("No file uploaded"), statusCode: 400);
+
+            var file = request.Form.Files[0];
+            if (file.Length == 0)
+                return Results.Json(ApiResult.Fail("Empty file"), statusCode: 400);
+
+            await using var stream = file.OpenReadStream();
+            var result = await service.UploadBadgeImageAsync(id, stream, file.FileName);
+
+            return result.Success
+                ? Results.Json(result)
+                : Results.Json(result, statusCode: 400);
+        });
+
+        // POST /api/admin/users/{userId}/badges/{badgeId}
+        group.MapPost("/users/{userId:guid}/badges/{badgeId:guid}", async (
+            Guid userId,
+            Guid badgeId,
+            IAdminApiService service) =>
+        {
+            var result = await service.AssignBadgeAsync(userId, badgeId);
+            return result.Success
+                ? Results.Json(result)
+                : Results.Json(result, statusCode: 400);
+        });
+
+        // DELETE /api/admin/users/{userId}/badges/{badgeId}
+        group.MapDelete("/users/{userId:guid}/badges/{badgeId:guid}", async (
+            Guid userId,
+            Guid badgeId,
+            IAdminApiService service) =>
+        {
+            var result = await service.RemoveBadgeAsync(userId, badgeId);
+            return result.Success
+                ? Results.Json(result)
+                : Results.Json(result, statusCode: 400);
+        });
+
         return group;
     }
 }

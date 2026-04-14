@@ -87,7 +87,7 @@ public class QuarterlyDigestJob : BackgroundService
 
         var allPlaytimes = await db.SteamPlaytimes
             .Include(sp => sp.Suggestion)
-            .Where(sp => sp.PlaytimeForeverMinutes > 0 && sp.Suggestion != null)
+            .Where(sp => sp.PlaytimeForeverMinutes > 0 && sp.Suggestion!.Status == SuggestionStatus.Finished && sp.Suggestion!.Ratings.Count > 0)
             .GroupBy(sp => sp.SuggestionId)
             .Select(g => new { SuggestionId = g.Key, Total = g.Sum(sp => sp.PlaytimeForeverMinutes!.Value) })
             .ToListAsync(stoppingToken);

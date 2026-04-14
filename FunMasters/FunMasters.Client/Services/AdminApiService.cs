@@ -74,4 +74,67 @@ public class AdminApiService(HttpClient http) : IAdminApiService
         return await response.Content.ReadFromJsonAsync<ApiResult>()
             ?? ApiResult.Fail("Failed to finish early");
     }
+
+    // Badge management
+    public async Task<List<BadgeDto>> GetBadgesAsync()
+    {
+        return await http.GetFromJsonAsync<List<BadgeDto>>("/api/admin/badges")
+            ?? [];
+    }
+
+    public async Task<ApiResult<Guid>> CreateBadgeAsync(string name, string? description, Stream? fileStream, string? fileName)
+    {
+        using var content = new MultipartFormDataContent();
+        content.Add(new StringContent(name), "name");
+        if (description != null)
+            content.Add(new StringContent(description), "description");
+        if (fileStream != null && !string.IsNullOrEmpty(fileName))
+        {
+            var streamContent = new StreamContent(fileStream);
+            content.Add(streamContent, "file", fileName);
+        }
+
+        var response = await http.PostAsync("/api/admin/badges", content);
+        return await response.Content.ReadFromJsonAsync<ApiResult<Guid>>()
+            ?? ApiResult<Guid>.Fail("Failed to create badge");
+    }
+
+    public async Task<ApiResult> UpdateBadgeAsync(Guid id, UpdateBadgeRequest request)
+    {
+        var response = await http.PutAsJsonAsync($"/api/admin/badges/{id}", request);
+        return await response.Content.ReadFromJsonAsync<ApiResult>()
+            ?? ApiResult.Fail("Failed to update badge");
+    }
+
+    public async Task<ApiResult> DeleteBadgeAsync(Guid id)
+    {
+        var response = await http.DeleteAsync($"/api/admin/badges/{id}");
+        return await response.Content.ReadFromJsonAsync<ApiResult>()
+            ?? ApiResult.Fail("Failed to delete badge");
+    }
+
+    public async Task<ApiResult> UploadBadgeImageAsync(Guid id, Stream fileStream, string fileName)
+    {
+        using var content = new MultipartFormDataContent();
+        var streamContent = new StreamContent(fileStream);
+        content.Add(streamContent, "file", fileName);
+
+        var response = await http.PostAsync($"/api/admin/badges/{id}/image", content);
+        return await response.Content.ReadFromJsonAsync<ApiResult>()
+            ?? ApiResult.Fail("Failed to upload badge image");
+    }
+
+    public async Task<ApiResult> AssignBadgeAsync(Guid userId, Guid badgeId)
+    {
+        var response = await http.PostAsync($"/api/admin/users/{userId}/badges/{badgeId}", null);
+        return await response.Content.ReadFromJsonAsync<ApiResult>()
+            ?? ApiResult.Fail("Failed to assign badge");
+    }
+
+    public async Task<ApiResult> RemoveBadgeAsync(Guid userId, Guid badgeId)
+    {
+        var response = await http.DeleteAsync($"/api/admin/users/{userId}/badges/{badgeId}");
+        return await response.Content.ReadFromJsonAsync<ApiResult>()
+            ?? ApiResult.Fail("Failed to remove badge");
+    }
 }

@@ -53,6 +53,17 @@
                         </InputSelect>
                     </label>
 
+                    <label class="floating-label">
+                        <span>Council Status</span>
+                        <InputSelect class="select" @bind-Value="_selectedStatus">
+                            <option value="Active">Active</option>
+                            <option value="Candidate">Candidate</option>
+                            <option value="Excommunicated">Excommunicated</option>
+                            <option value="Executed">Executed</option>
+                            <option value="Shadow">Shadow</option>
+                        </InputSelect>
+                    </label>
+
                     <div>
                         <button type="submit" class="btn btn-primary" disabled="@_isSubmitting">
                             @if (_isSubmitting)
@@ -64,6 +75,41 @@
                         <button class="btn btn-secondary ms-2" @onclick="@(() => Nav.NavigateTo("/admin/users"))">Cancel</button>
                     </div>
                 </EditForm>
+
+                <div class="divider">Badges</div>
+                <div class="flex flex-wrap gap-2 items-center">
+                    @if (_userBadges.Any())
+                    {
+                        @foreach (var badge in _userBadges)
+                        {
+                            <div class="badge badge-lg badge-primary gap-1">
+                                @if (!string.IsNullOrEmpty(badge.ImageUrl))
+                                {
+                                    <img src="@badge.ImageUrl" alt="@badge.Name" class="w-4 h-4 object-contain"/>
+                                }
+                                @badge.Name
+                                <button class="btn btn-ghost btn-xs" @onclick="() => RemoveBadge(badge.BadgeId)">x</button>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <span class="opacity-70">No badges assigned</span>
+                    }
+                </div>
+                @if (_userBadges.Count < 2)
+                {
+                    <div class="flex gap-2 mt-2 items-center">
+                        <select class="select select-sm" @bind="_selectedBadgeId">
+                            <option value="">Select badge...</option>
+                            @foreach (var badge in _allBadges.Where(b => !_userBadges.Any(ub => ub.BadgeId == b.Id)))
+                            {
+                                <option value="@badge.Id">@badge.Name</option>
+                            }
+                        </select>
+                        <button class="btn btn-sm btn-primary" @onclick="AssignBadge" disabled="@string.IsNullOrEmpty(_selectedBadgeId)">Assign</button>
+                    </div>
+                }
             }
         </div>
     </div>
@@ -75,9 +121,13 @@
     [PersistentState] public InputModel? Model { get; set; }
     [CascadingParameter] public Task<AuthenticationState> AuthenticationStateTask { get; set; }
     private string _selectedRole = "";
+    private string _selectedStatus = "Active";
     private bool _loading = true;
     private bool _isSubmitting;
     private string? _errorMessage;
+    private List<BadgeDto> _allBadges = [];
+    private List<UserBadgeDto> _userBadges = [];
+    private string _selectedBadgeId = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -97,17 +147,19 @@
                     Nav.NavigateTo("/admin/users");
                     return;
                 }
-                
+
                 Model = new InputModel
                 {
                     Email = user.Email,
                     UserName = user.UserName,
                     CycleOrder = user.CycleOrder
                 };
+                _selectedRole = user.Roles.Contains("Admin") ? "Admin" : "Member";
+                _selectedStatus = user.CouncilStatus;
+                _userBadges = user.Badges;
             }
 
-            AuthenticationState state = await AuthenticationStateTask;
-            _selectedRole = state.User.IsInRole("Admin") ? "Admin" : "Member";
+            _allBadges = await AdminApi.GetBadgesAsync();
         }
         catch (Exception)
         {
@@ -134,7 +186,8 @@
                 Email = Model.Email,
                 UserName = Model.UserName,
                 CycleOrder = Model.CycleOrder,
-                IsAdmin = _selectedRole == "Admin"
+                IsAdmin = _selectedRole == "Admin",
+                CouncilStatus = _selectedStatus
             };
 
             var result = await AdminApi.UpdateUserAsync(userId, request);
@@ -155,6 +208,35 @@
         finally
         {
             _isSubmitting = false;
+        }
+    }
+
+    private async Task AssignBadge()
+    {
+        if (Id is null || !Guid.TryParse(Id, out var userId) || !Guid.TryParse(_selectedBadgeId, out var badgeId))
+            return;
+
+        var result = await AdminApi.AssignBadgeAsync(userId, badgeId);
+        if (result.Success)
+        {
+            var user = await AdminApi.GetUserAsync(userId);
+            if (user != null)
+                _userBadges = user.Badges;
+            _selectedBadgeId = "";
+        }
+    }
+
+    private async Task RemoveBadge(Guid badgeId)
+    {
+        if (Id is null || !Guid.TryParse(Id, out var userId))
+            return;
+
+        var result = await AdminApi.RemoveBadgeAsync(userId, badgeId);
+        if (result.Success)
+        {
+            var user = await AdminApi.GetUserAsync(userId);
+            if (user != null)
+                _userBadges = user.Badges;
         }
     }
 

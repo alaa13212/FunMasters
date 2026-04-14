@@ -7,4 +7,5 @@ public class ProfileDto
     public string UserName { get; set; } = null!;
     public string? AvatarUrl { get; set; }
     public string? SteamId { get; set; }
+    public string? Bio { get; set; }
 }

@@ -1,4 +1,5 @@
 @page "/"
+@using FunMasters.Client.Components
 @using FunMasters.Client.Pages.Rating
 @inject ISuggestionApiService SuggestionApi
 @inject IRatingApiService RatingApi
@@ -21,7 +22,8 @@
                     <div>
                         <h2 class="card-title text-primary text-3xl md:text-5xl mb-5">@HomeData.ActiveSuggestion.Title</h2>
                         <p class="mb-1">
-                            Suggested By<br/><strong><img src="@HomeData.ActiveSuggestion.SuggestedByAvatarUrl" class="ms-3 me-1 my-2 w-6 h-6 mask mask-squircle"/> @HomeData.ActiveSuggestion.SuggestedByUserName</strong>
+                            Suggested By<br/>
+                            <strong class="my-2 flex flex-row gap-3"><img src="@HomeData.ActiveSuggestion.SuggestedByAvatarUrl" class="ms-3 w-6 h-6 mask mask-squircle"/> <a href="/funmaster/@HomeData.ActiveSuggestion.SuggestedById"  @onclick:stopPropagation>@HomeData.ActiveSuggestion.SuggestedByUserName</a><UserBadgeDisplay Badges="@HomeData.ActiveSuggestion.SuggestedByBadges" UserId="@HomeData.ActiveSuggestion.SuggestedById" SizePx="18"/></strong>
                         </p>
                         <p>
                             Start: @HomeData.ActiveSuggestion.ActiveAtUtc!.Value.ToLocalTime().ToString("dd/MM/yyyy")<br/>
@@ -68,7 +70,7 @@
                             <span class="absolute text-[200px] -bottom-20 -end-5 opacity-10 select-none">@(i++)</span>
                             <h3 class="text-xl mb-0 text-primary">@game.Title</h3>
                             <p>
-                                Suggested By<br/><strong><img src="@game.SuggestedByAvatarUrl" class="md:ms-1 me-1 my-2 w-6 h-6 mask mask-squircle"/> @game.SuggestedByUserName</strong>
+                                Suggested By<br/><strong><img src="@game.SuggestedByAvatarUrl" class="md:ms-1 me-1 my-2 w-6 h-6 mask mask-squircle"/> <a href="/funmaster/@game.SuggestedById" @onclick:stopPropagation>@game.SuggestedByUserName</a><UserBadgeDisplay Badges="@game.SuggestedByBadges" UserId="@game.SuggestedById" SizePx="16"/></strong>
                             </p>
                             <span>Expected Start:<br/>@game.ActiveAtUtc!.Value.ToLocalTime().ToString("yyyy-MM-dd")</span>
                             <span>Expected End:<br/>@game.FinishedAtUtc!.Value.ToLocalTime().ToString("yyyy-MM-dd")</span>
@@ -111,7 +113,8 @@
                                 <br/>
                                 <strong class="flex flex-row items-center gap-2">
                                     <img src="@game.SuggestedByAvatarUrl" class="md:ms-1 me-1 my-2 w-6 h-6 mask mask-squircle"/>
-                                    <span class="text-nowrap text-ellipsis overflow-hidden">@game.SuggestedByUserName</span>
+                                    <a href="/funmaster/@game.SuggestedById" @onclick:stopPropagation class="text-nowrap text-ellipsis overflow-hidden">@game.SuggestedByUserName</a>
+                                    <UserBadgeDisplay Badges="@game.SuggestedByBadges" UserId="@game.SuggestedById" SizePx="16"/>
                                 </strong>
 
                                 @if (game.AverageRating.HasValue)

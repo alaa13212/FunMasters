@@ -76,6 +76,38 @@ public static class AccountEndpoints
                 : Results.Json(result, statusCode: 400);
         }).RequireAuthorization();
 
+        // GET /api/account/funmaster/{userId}
+        group.MapGet("/funmaster/{userId:guid}", async (
+            Guid userId,
+            IAccountApiService service) =>
+        {
+            var result = await service.GetFunMasterProfileAsync(userId);
+            return result != null ? Results.Ok(result) : Results.NotFound();
+        });
+
+        // POST /api/account/funmaster/{userId}/comments
+        group.MapPost("/funmaster/{userId:guid}/comments", async (
+            Guid userId,
+            [FromBody] CreateFunMasterCommentRequest request,
+            IAccountApiService service) =>
+        {
+            var result = await service.AddFunMasterCommentAsync(userId, request);
+            return result.Success
+                ? Results.Json(result)
+                : Results.Json(result, statusCode: 400);
+        }).RequireAuthorization();
+
+        // DELETE /api/account/funmaster/comments/{commentId}
+        group.MapDelete("/funmaster/comments/{commentId:guid}", async (
+            Guid commentId,
+            IAccountApiService service) =>
+        {
+            var result = await service.DeleteFunMasterCommentAsync(commentId);
+            return result.Success
+                ? Results.Json(result)
+                : Results.Json(result, statusCode: 400);
+        }).RequireAuthorization();
+
         return group;
     }
 }
