@@ -51,7 +51,7 @@
                             <div class="flex items-center gap-2 bg-base-300 rounded-lg px-3 py-2">
                                 @if (!string.IsNullOrEmpty(badge.ImageUrl))
                                 {
-                                    <img src="@badge.ImageUrl" alt="@badge.Name" class="w-8 h-8 object-contain"/>
+                                    <img src="@badge.ImageUrl" alt="@badge.Name" class="w-12 h-12 hover:scale-400 transition-all object-contain"/>
                                 }
                                 <div>
                                     <div class="font-bold text-sm">@badge.Name</div>
