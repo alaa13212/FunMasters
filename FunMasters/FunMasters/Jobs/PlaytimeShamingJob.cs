@@ -66,6 +66,16 @@ public class PlaytimeShamingJob : BackgroundService
 
         if (!isMidpoint && !isTwoDaysLeft) return;
 
+        // Refresh playtimes from Steam before checking
+        try
+        {
+            await playtimeService.RefreshAllPlaytimesAsync(active.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to refresh playtimes for shaming check");
+        }
+
         var appId = SteamPlaytimeService.ExtractSteamAppId(active.SteamLink);
         if (appId == null) return;
 

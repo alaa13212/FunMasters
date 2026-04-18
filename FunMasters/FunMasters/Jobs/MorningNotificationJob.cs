@@ -59,7 +59,7 @@ public class MorningNotificationJob : BackgroundService
 
             try
             {
-                // await telegram.SendMessageAsync(notification.Message);
+                await telegram.SendMessageAsync(notification.Message);
             }
             catch (Exception ex)
             {

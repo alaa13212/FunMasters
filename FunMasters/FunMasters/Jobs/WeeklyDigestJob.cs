@@ -53,6 +53,7 @@ public class WeeklyDigestJob : BackgroundService
         using var scope = _services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var lucian = scope.ServiceProvider.GetRequiredService<LucianGalade>();
+        var playtimeService = scope.ServiceProvider.GetRequiredService<SteamPlaytimeService>();
 
         var now = FunMastersTime.UtcNow;
         var oneWeekAgo = now.AddDays(-7);
@@ -99,6 +100,16 @@ public class WeeklyDigestJob : BackgroundService
             var totalDays = (active.FinishedAtUtc.Value - active.ActiveAtUtc.Value).Days;
             activeDaysElapsed = (now - active.ActiveAtUtc.Value).Days;
             activeDaysRemaining = Math.Max(0, totalDays - activeDaysElapsed.Value);
+
+            // Refresh playtimes from Steam before reporting
+            try
+            {
+                await playtimeService.RefreshAllPlaytimesAsync(active.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to refresh playtimes for weekly digest");
+            }
 
             var playtimeRecords = await db.SteamPlaytimes
                 .Include(sp => sp.User)

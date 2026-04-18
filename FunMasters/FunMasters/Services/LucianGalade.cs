@@ -29,7 +29,7 @@ public class LucianGalade(TelegramService telegram, ApplicationDbContext db, ILo
     {
         try
         {
-            // await telegram.SendMessageAsync(message);
+            await telegram.SendMessageAsync(message);
         }
         catch (Exception ex)
         {
