@@ -1,6 +1,5 @@
 @page "/game/active"
 @page "/game/{Id:guid}"
-@using FunMasters.Client.Components
 @using System.Security.Claims
 @inject ISuggestionApiService SuggestionApi
 @inject IRatingApiService RatingApi
@@ -140,7 +139,7 @@
                                                         <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                                                     </svg>
                                                     @rating.PlaytimeForeverDisplay total
-                                                    @if (rating.Playtime2WeeksMinutes.HasValue)
+                                                    @if (rating.Playtime2WeeksMinutes.HasValue && rating.Playtime2WeeksMinutes != rating.PlaytimeForeverMinutes)
                                                     {
                                                         <span>(@rating.Playtime2WeeksDisplay at finish)</span>
                                                     }
@@ -173,9 +172,9 @@
                                             {
                                                 <span class="text-xs opacity-70">
                                                     @pt.PlaytimeForeverDisplay total
-                                                    @if (pt.Playtime2WeeksMinutes.HasValue)
+                                                    @if (pt.Playtime2WeeksMinutes.HasValue && pt.Playtime2WeeksMinutes != pt.PlaytimeForeverMinutes)
                                                     {
-                                                        <span>(@pt.Playtime2WeeksDisplay @(Game.Suggestion.Status == SuggestionStatus.Active? " last 2 weeks" : "at finish")</span>
+                                                        <span>(@pt.Playtime2WeeksDisplay @(Game.Suggestion.Status == SuggestionStatus.Active? " last 2 weeks" : "at finish"))</span>
                                                     }
                                                 </span>
                                             }
