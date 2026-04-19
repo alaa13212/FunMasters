@@ -39,6 +39,13 @@ public class WeeklyDigestJob : BackgroundService
         }
     }
 
+    private static string FormatPlaytime(int minutes)
+    {
+        if (minutes < 60) return $"{minutes}min";
+        var hours = minutes / 60.0;
+        return Math.Abs(hours - (int)hours) < 0.1 ? $"{(int)hours}h" : $"{hours:F1}h";
+    }
+
     private static TimeSpan GetDelayUntilNext(DayOfWeek targetDay, int hourUtc)
     {
         var now = DateTime.UtcNow;
@@ -58,6 +65,11 @@ public class WeeklyDigestJob : BackgroundService
         var now = FunMastersTime.UtcNow;
         var oneWeekAgo = now.AddDays(-7);
 
+        var activeMemberIds = await db.Users
+            .Where(u => u.CycleOrder > 0 && CouncilStatusRoles.ReceiveNotifications.Contains(u.CouncilStatus))
+            .Select(u => u.Id)
+            .ToListAsync(stoppingToken);
+
         // Check for a game that finished this week
         var finishedThisWeek = await db.Suggestions
             .Include(s => s.Ratings)
@@ -69,6 +81,7 @@ public class WeeklyDigestJob : BackgroundService
         string? finishedTitle = finishedThisWeek?.Title;
         string? finishedRating = null;
         string? finishedMostPlayed = null;
+        int finishedPendingRatingsCount = 0;
 
         if (finishedThisWeek != null)
         {
@@ -77,12 +90,15 @@ public class WeeklyDigestJob : BackgroundService
 
             var playtimes = await db.SteamPlaytimes
                 .Include(sp => sp.User)
-                .Where(sp => sp.SuggestionId == finishedThisWeek.Id && sp.PlaytimeForeverMinutes > 0)
-                .OrderByDescending(sp => sp.PlaytimeForeverMinutes)
+                .Where(sp => sp.SuggestionId == finishedThisWeek.Id && sp.Playtime2WeeksMinutes > 0)
+                .OrderByDescending(sp => sp.Playtime2WeeksMinutes)
                 .ToListAsync(stoppingToken);
 
             if (playtimes.Count > 0)
-                finishedMostPlayed = playtimes[0].User?.UserName;
+                finishedMostPlayed = $"{playtimes[0].User?.UserName} ({FormatPlaytime(playtimes[0].Playtime2WeeksMinutes!.Value)})";
+
+            var finishedRaterIds = finishedThisWeek.Ratings.Select(r => r.RaterId).ToHashSet();
+            finishedPendingRatingsCount = activeMemberIds.Count(id => !finishedRaterIds.Contains(id));
         }
 
         // Current active game
@@ -113,11 +129,11 @@ public class WeeklyDigestJob : BackgroundService
 
             var playtimeRecords = await db.SteamPlaytimes
                 .Include(sp => sp.User)
-                .Where(sp => sp.SuggestionId == active.Id && sp.PlaytimeForeverMinutes > 0)
+                .Where(sp => sp.SuggestionId == active.Id && sp.Playtime2WeeksMinutes > 0)
                 .ToListAsync(stoppingToken);
 
             activePlaytimes = playtimeRecords
-                .Select(sp => (sp.User?.UserName ?? "Unknown", sp.PlaytimeForeverMinutes!.Value))
+                .Select(sp => (sp.User?.UserName ?? "Unknown", sp.Playtime2WeeksMinutes!.Value))
                 .ToList();
         }
 
@@ -128,28 +144,24 @@ public class WeeklyDigestJob : BackgroundService
             .OrderBy(s => s.ActiveAtUtc)
             .FirstOrDefaultAsync(stoppingToken);
 
-        // Pending ratings count
+        // Pending ratings count (overall, across all finished games)
         var allFinished = await db.Suggestions
             .Include(s => s.Ratings)
             .Where(s => s.Status == SuggestionStatus.Finished)
             .ToListAsync(stoppingToken);
 
-        var activeMemberIds = await db.Users
-            .Where(u => u.CycleOrder > 0 && CouncilStatusRoles.ReceiveNotifications.Contains(u.CouncilStatus))
-            .Select(u => u.Id)
-            .ToListAsync(stoppingToken);
-
-        var pendingRatings = 0;
+        var overallPendingRatings = 0;
         foreach (var fg in allFinished)
         {
             var raterIds = fg.Ratings.Select(r => r.RaterId).ToHashSet();
-            pendingRatings += activeMemberIds.Count(id => !raterIds.Contains(id));
+            overallPendingRatings += activeMemberIds.Count(id => !raterIds.Contains(id));
         }
 
         await lucian.SendWeeklyDigestAsync(
             finishedTitle, finishedRating, finishedMostPlayed,
             activeTitle, activeDaysElapsed, activeDaysRemaining, activePlaytimes,
             next?.Title, next?.ActiveAtUtc,
-            pendingRatings);
+            finishedPendingRatingsCount,
+            overallPendingRatings);
     }
 }

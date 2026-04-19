@@ -132,7 +132,8 @@ public class LucianGalade(TelegramService telegram, ApplicationDbContext db, ILo
         IEnumerable<(string UserName, int PlaytimeMinutes)>? activePlaytimes,
         string? nextGameTitle,
         DateTime? nextGameStart,
-        int pendingRatingsCount)
+        int finishedPendingRatingsCount,
+        int overallPendingRatingsCount)
     {
         var sb = new System.Text.StringBuilder();
 
@@ -144,8 +145,8 @@ public class LucianGalade(TelegramService telegram, ApplicationDbContext db, ILo
             sb.AppendLine($"<b>Concluded:</b> {Escape(finishedGameTitle)}");
             if (finishedGameAverageRating != null)
             {
-                string penddingReview = pendingRatingsCount > 0 ? $" ({pendingRatingsCount} ratings missing)" : "";
-                sb.AppendLine($"  Average Rating: {finishedGameAverageRating}{penddingReview}");
+                string pendingReview = finishedPendingRatingsCount > 0 ? $" ({finishedPendingRatingsCount} rating(s) missing)" : "";
+                sb.AppendLine($"  Average Rating: {finishedGameAverageRating}{pendingReview}");
             }
 
             if (finishedGameMostPlayed != null)
@@ -177,8 +178,8 @@ public class LucianGalade(TelegramService telegram, ApplicationDbContext db, ILo
             sb.AppendLine();
         }
 
-        if (pendingRatingsCount > 0)
-            sb.AppendLine($"<b>Pending Verdicts:</b> {pendingRatingsCount} unfinished rating(s) await the Council's attention.");
+        if (overallPendingRatingsCount > 0)
+            sb.AppendLine($"<b>Pending Verdicts:</b> {overallPendingRatingsCount} unfinished rating(s) await the Council's attention.");
 
         sb.AppendLine("\nThe Council is advised to stay current.");
         sb.Append("\n<i>— Lucian Galade, Chief of Staff</i>");
