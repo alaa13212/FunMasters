@@ -110,8 +110,6 @@ public class SuggestionService(
                 finalSort.Add(suggestion);
             }
         }
-
-        finalSort.AddRange(suggestions.Where(s => s.SuggestedBy!.CycleOrder < 1 || s.SuggestedBy!.CouncilStatus == CouncilStatus.Shadow));
         
         return finalSort.Select(MapToDto).ToList();
     }
