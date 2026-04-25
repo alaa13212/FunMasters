@@ -91,8 +91,7 @@ public class PlaytimeShamingJob : BackgroundService
                 .Where(sp => sp.SuggestionId == active.Id && sp.UserId == member.Id)
                 .FirstOrDefaultAsync(stoppingToken);
 
-            var hasPlayed = playtimes?.PlaytimeForeverMinutes > 0;
-
+            bool hasPlayed = playtimes?.Playtime2WeeksMinutes > 0;
             if (!hasPlayed)
             {
                 // Double-check via Steam API
@@ -100,7 +99,7 @@ public class PlaytimeShamingJob : BackgroundService
                 {
                     var steamService = scope.ServiceProvider.GetRequiredService<SteamService>();
                     var result = await steamService.GetPlaytimeAsync(member.SteamId!, appId.Value);
-                    if (result == null || result.Value.playtimeForever == 0)
+                    if (result == null || result.Value.playtime2Weeks == 0)
                         absentMembers.Add(member.UserName ?? "Unknown");
                 }
                 catch
