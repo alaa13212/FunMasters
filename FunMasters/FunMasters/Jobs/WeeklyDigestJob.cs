@@ -144,10 +144,11 @@ public class WeeklyDigestJob : BackgroundService
             .OrderBy(s => s.ActiveAtUtc)
             .FirstOrDefaultAsync(stoppingToken);
 
+        DateTime ratingCutoff = now.Subtract(TimeSpan.FromDays(7 * 3 + 2));
         // Pending ratings count (overall, across all finished games)
         var allFinished = await db.Suggestions
             .Include(s => s.Ratings)
-            .Where(s => s.Status == SuggestionStatus.Finished)
+            .Where(s => s.Status == SuggestionStatus.Finished && s.FinishedAtUtc > ratingCutoff)
             .ToListAsync(stoppingToken);
 
         var overallPendingRatings = 0;
