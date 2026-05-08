@@ -18,6 +18,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Badge> Badges { get; set; }
     public DbSet<UserBadge> UserBadges { get; set; }
     public DbSet<FunMasterComment> FunMasterComments { get; set; }
+    public DbSet<HltbCache> HltbCache { get; set; }
     
     
     protected override void OnModelCreating(ModelBuilder builder)
@@ -69,6 +70,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
+        builder.Entity<HltbCache>(entity =>
+        {
+            entity.HasIndex(e => e.Title).IsUnique();
+        });
+
         var utcConverter = new ValueConverter<DateTime, DateTime>(
             v => v.Kind == DateTimeKind.Utc ? v : DateTime.SpecifyKind(v, DateTimeKind.Utc),
             v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
@@ -82,6 +88,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<Badge>().Property(e => e.CreatedAtUtc).HasConversion(utcConverter);
         builder.Entity<UserBadge>().Property(e => e.AssignedAtUtc).HasConversion(utcConverter);
         builder.Entity<FunMasterComment>().Property(e => e.CreatedAtUtc).HasConversion(utcConverter);
+        builder.Entity<HltbCache>().Property(e => e.ExpiresAtUtc).HasConversion(utcConverter);
+        builder.Entity<HltbCache>().Property(e => e.CreatedAtUtc).HasConversion(utcConverter);
     }
     
 }

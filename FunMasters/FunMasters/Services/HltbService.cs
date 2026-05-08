@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 public class HltbService
 {
     private readonly HttpClient _httpClient;
-    private const string ApiUrl = "https://howlongtobeat.com/api/find";
+    private const string ApiUrl = "https://howlongtobeat.com/api/bleed";
     private TokenClass? _cachedToken;
     private DateTime _tokenExpiry = DateTime.MinValue;
 
