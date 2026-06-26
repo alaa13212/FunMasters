@@ -114,7 +114,7 @@ public class WeeklyDigestJob : BackgroundService
         if (active?.ActiveAtUtc != null && active.FinishedAtUtc != null)
         {
             var totalDays = (active.FinishedAtUtc.Value - active.ActiveAtUtc.Value).Days;
-            activeDaysElapsed = (now - active.ActiveAtUtc.Value).Days;
+            activeDaysElapsed = (now - active.ActiveAtUtc.Value).Days + 1;
             activeDaysRemaining = Math.Max(0, totalDays - activeDaysElapsed.Value);
 
             // Refresh playtimes from Steam before reporting

@@ -99,7 +99,7 @@ public class PlaytimeShamingJob : BackgroundService
                 {
                     var steamService = scope.ServiceProvider.GetRequiredService<SteamService>();
                     var result = await steamService.GetPlaytimeAsync(member.SteamId!, appId.Value);
-                    if (result == null || result.Value.playtime2Weeks == 0)
+                    if (result?.playtime2Weeks is null or 0)
                         absentMembers.Add(member.UserName ?? "Unknown");
                 }
                 catch
