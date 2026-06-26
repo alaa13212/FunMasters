@@ -137,4 +137,22 @@ public class AdminApiService(HttpClient http) : IAdminApiService
         return await response.Content.ReadFromJsonAsync<ApiResult>()
             ?? ApiResult.Fail("Failed to remove badge");
     }
+
+    // Telegram
+    public async Task<ApiResult> SendTelegramMessageAsync(string text, Stream? imageStream, string? imageFileName, string? imageContentType)
+    {
+        using var content = new MultipartFormDataContent();
+        content.Add(new StringContent(text ?? ""), "text");
+        if (imageStream != null && !string.IsNullOrEmpty(imageFileName))
+        {
+            var streamContent = new StreamContent(imageStream);
+            if (!string.IsNullOrEmpty(imageContentType))
+                streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(imageContentType);
+            content.Add(streamContent, "image", imageFileName);
+        }
+
+        var response = await http.PostAsync("/api/admin/telegram/send", content);
+        return await response.Content.ReadFromJsonAsync<ApiResult>()
+            ?? ApiResult.Fail("Failed to send Telegram message");
+    }
 }

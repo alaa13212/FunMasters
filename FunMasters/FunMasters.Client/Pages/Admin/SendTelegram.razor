@@ -1,0 +1,251 @@
+@page "/admin/telegram"
+@attribute [Authorize(Roles = "Admin")]
+@inject IAdminApiService AdminApi
+
+<PageTitle>Send Telegram Message</PageTitle>
+
+<div class="max-w-3xl mx-auto p-6 space-y-6">
+    <header class="flex items-start gap-4">
+        <div class="bg-primary/10 text-primary rounded-xl p-3 shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M8.287 5.906q-1.168.486-4.666 2.01-.567.225-.595.442c-.03.243.275.339.69.47l.175.055c.408.133.958.288 1.243.294q.39.01.868-.32 3.269-2.206 3.374-2.23c.05-.012.12-.026.166.016s.042.12.037.141c-.03.129-1.227 1.241-1.846 1.817-.193.18-.33.307-.358.336a8 8 0 0 1-.188.186c-.38.366-.664.64.015 1.088.327.216.589.393.85.571.284.194.568.387.936.629q.14.092.27.187c.331.236.63.448.997.414.214-.02.435-.22.547-.82.265-1.417.786-4.486.906-5.751a1.4 1.4 0 0 0-.013-.315.34.34 0 0 0-.114-.217.53.53 0 0 0-.31-.093c-.3.005-.763.166-2.984 1.09"/>
+            </svg>
+        </div>
+        <div>
+            <h1 class="text-2xl font-bold">Send Telegram Message</h1>
+            <p class="text-sm opacity-70 mt-1">Broadcasts to the Council's Telegram group via Lucian Galade.</p>
+        </div>
+    </header>
+
+    <div class="card bg-base-200 shadow-xl">
+        <div class="card-body gap-6">
+            <label class="form-control w-full">
+                <div class="label pb-1">
+                    <span class="label-text font-medium">Message</span>
+                    <div class="flex items-center gap-2">
+                        @if (_message != LucianTemplate)
+                        {
+                            <button type="button" class="label-text-alt link link-hover opacity-70" @onclick="ResetTemplate">
+                                Reset to template
+                            </button>
+                        }
+                        <span class="label-text-alt @(_charLimit != null && _message.Length > _charLimit ? "text-error font-semibold" : "opacity-60")">
+                            @_message.Length / @(_charLimit ?? 4096)
+                        </span>
+                    </div>
+                </div>
+                <textarea
+                    class="textarea textarea-bordered w-full h-44 leading-relaxed text-base focus:textarea-primary"
+                    placeholder="Type your message…"
+                    maxlength="@(_charLimit ?? 4096)"
+                    @bind="_message"
+                    @bind:event="oninput"></textarea>
+                <div class="label pt-1">
+                    <span class="label-text-alt opacity-60">
+                        Pre-filled with Lucian's standard header &amp; signature. Image-only sends (no caption) skip both.
+                    </span>
+                </div>
+            </label>
+
+            <div class="divider my-0 opacity-50"></div>
+
+            <label class="form-control w-full">
+                <div class="label pb-1">
+                    <span class="label-text font-medium">
+                        Image <span class="opacity-60 font-normal">— optional</span>
+                    </span>
+                </div>
+                <InputFile OnChange="OnFileSelected"
+                           accept=".jpg,.jpeg,.png,.gif,.webp"
+                           class="file-input file-input-bordered w-full"/>
+                <div class="label pt-1">
+                    <span class="label-text-alt opacity-60">JPEG, PNG, GIF, or WebP · max 5 MB</span>
+                </div>
+
+                @if (_selectedFile != null)
+                {
+                    <div class="mt-3 flex items-center gap-4 p-3 bg-base-300 rounded-lg border border-base-content/10">
+                        @if (_imagePreviewUrl != null)
+                        {
+                            <img src="@_imagePreviewUrl"
+                                 alt="preview"
+                                 class="w-16 h-16 object-cover rounded-md border border-base-content/10 shrink-0"/>
+                        }
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium truncate">@_selectedFile.Name</p>
+                            <p class="text-xs opacity-60">@FormatSize(_selectedFile.Size)</p>
+                        </div>
+                        <button type="button"
+                                class="btn btn-ghost btn-sm btn-circle"
+                                @onclick="ClearFile"
+                                aria-label="Remove image">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                }
+            </label>
+
+            @if (!string.IsNullOrEmpty(_status))
+            {
+                <div role="alert" class="alert @(_isSuccess ? "alert-success" : "alert-error") shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+                        @if (_isSuccess)
+                        {
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        }
+                        else
+                        {
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        }
+                    </svg>
+                    <span>@_status</span>
+                </div>
+            }
+
+            <div class="flex items-center gap-2 pt-3 border-t border-base-content/10">
+                @if (_awaitingConfirm)
+                {
+                    <span class="text-sm opacity-70 mr-auto">Confirm — this will post to the Telegram group.</span>
+                    <button class="btn btn-ghost" @onclick="CancelConfirm" disabled="@_sending">Cancel</button>
+                    <button class="btn btn-error gap-2" @onclick="SendConfirmed" disabled="@_sending">
+                        @if (_sending)
+                        {
+                            <span class="loading loading-spinner loading-sm"></span>
+                        }
+                        Confirm & Send
+                    </button>
+                }
+                else
+                {
+                    <button class="btn btn-primary gap-2 ml-auto" @onclick="RequestSend" disabled="@(!CanSend)">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083l6.024-14.477zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471-.47 1.178z"/>
+                        </svg>
+                        Send to Telegram
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // Mirrors the header + signature used by LucianGalade in Services/LucianGalade.cs.
+    private const string LucianHeader = "Esteemed members of the <b>Council of Fun Masters</b>,\n\n";
+    private const string LucianSignature = "\n<i>— Lucian Galade, Chief of Staff</i>";
+    private const string LucianTemplate = LucianHeader + LucianSignature;
+
+    private string _message = LucianTemplate;
+    private IBrowserFile? _selectedFile;
+    private string? _imagePreviewUrl;
+    private bool _awaitingConfirm;
+    private bool _sending;
+    private string? _status;
+    private bool _isSuccess;
+
+    private const long MaxImageBytes = 5 * 1024 * 1024;
+
+    private int? _charLimit => _selectedFile != null ? 1024 : null;
+
+    private bool CanSend =>
+        !string.IsNullOrWhiteSpace(_message) || _selectedFile != null;
+
+    private void ResetTemplate() => _message = LucianTemplate;
+
+    private static string FormatSize(long bytes) =>
+        bytes < 1024 ? $"{bytes} B" : $"{bytes / 1024.0:F0} KB";
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        _status = null;
+        var file = e.File;
+        if (file.Size > MaxImageBytes)
+        {
+            _status = "Image must be 5 MB or smaller";
+            return;
+        }
+
+        _selectedFile = file;
+
+        // Build a data URL preview so we don't need JS interop.
+        try
+        {
+            await using var stream = file.OpenReadStream(MaxImageBytes);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            var b64 = Convert.ToBase64String(ms.ToArray());
+            _imagePreviewUrl = $"data:{file.ContentType};base64,{b64}";
+        }
+        catch
+        {
+            _imagePreviewUrl = null;
+        }
+    }
+
+    private void ClearFile()
+    {
+        _selectedFile = null;
+        _imagePreviewUrl = null;
+    }
+
+    private void RequestSend()
+    {
+        if (!CanSend) return;
+        _status = null;
+        _awaitingConfirm = true;
+    }
+
+    private void CancelConfirm()
+    {
+        _awaitingConfirm = false;
+    }
+
+    private async Task SendConfirmed()
+    {
+        _sending = true;
+        _status = null;
+        try
+        {
+            Stream? stream = null;
+            string? fileName = null;
+            string? contentType = null;
+            if (_selectedFile != null)
+            {
+                var ms = new MemoryStream();
+                await _selectedFile.OpenReadStream(MaxImageBytes).CopyToAsync(ms);
+                ms.Position = 0;
+                stream = ms;
+                fileName = _selectedFile.Name;
+                contentType = _selectedFile.ContentType;
+            }
+
+            // Image-only sends (no caption) skip Lucian's header & signature.
+            var textToSend = (stream != null && string.IsNullOrWhiteSpace(_message)) ? "" : _message;
+            var result = await AdminApi.SendTelegramMessageAsync(textToSend, stream, fileName, contentType);
+            if (result.Success)
+            {
+                _isSuccess = true;
+                _status = "Message sent.";
+                _message = LucianTemplate;
+                ClearFile();
+            }
+            else
+            {
+                _isSuccess = false;
+                _status = result.ErrorMessage ?? "Failed to send.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _isSuccess = false;
+            _status = ex.Message;
+        }
+        finally
+        {
+            _sending = false;
+            _awaitingConfirm = false;
+        }
+    }
+}

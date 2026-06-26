@@ -14,7 +14,8 @@ public class AdminService(
     AvatarStorage avatarStorage,
     BadgeStorage badgeStorage,
     QueueManager queueManager,
-    LucianGalade lucianGalade) : IAdminApiService
+    LucianGalade lucianGalade,
+    TelegramService telegram) : IAdminApiService
 {
     private const string AdminRole = "Admin";
 
@@ -436,7 +437,7 @@ public class AdminService(
         return ApiResult.Ok();
     }
 
-    public async Task<ApiResult> RemoveBadgeAsync(Guid userId, Guid badgeId)
+public async Task<ApiResult> RemoveBadgeAsync(Guid userId, Guid badgeId)
     {
         var userBadge = await db.UserBadges
             .FirstOrDefaultAsync(ub => ub.UserId == userId && ub.BadgeId == badgeId);
@@ -446,7 +447,50 @@ public class AdminService(
 
         db.UserBadges.Remove(userBadge);
         await db.SaveChangesAsync();
-
         return ApiResult.Ok();
+    }
+
+    // Telegram
+    private static readonly HashSet<string> AllowedImageContentTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "image/jpeg", "image/png", "image/gif", "image/webp"
+    };
+    private const long MaxImageBytes = 5 * 1024 * 1024;
+
+    public async Task<ApiResult> SendTelegramMessageAsync(string text, Stream? imageStream, string? imageFileName, string? imageContentType)
+    {
+        if (string.IsNullOrWhiteSpace(text) && imageStream == null)
+            return ApiResult.Fail("Provide a message or an image");
+
+        // Telegram caps captions at 1024 chars; plain messages at 4096.
+        var textLimit = imageStream != null ? 1024 : 4096;
+        if (!string.IsNullOrEmpty(text) && text.Length > textLimit)
+            return ApiResult.Fail($"Message must be {textLimit} characters or fewer when {(imageStream != null ? "an image is attached" : "sent as text")}");
+
+        if (imageStream != null)
+        {
+            if (string.IsNullOrWhiteSpace(imageContentType) || !AllowedImageContentTypes.Contains(imageContentType))
+                return ApiResult.Fail("Unsupported image type. Allowed: JPEG, PNG, GIF, WebP");
+
+            if (imageStream.Length > MaxImageBytes)
+                return ApiResult.Fail("Image must be 5 MB or smaller");
+        }
+
+        try
+        {
+            if (imageStream != null)
+            {
+                await telegram.SendPhotoAsync(text, imageStream, imageFileName ?? "image", imageContentType!);
+            }
+            else
+            {
+                await telegram.SendMessageAsync(text);
+            }
+            return ApiResult.Ok();
+        }
+        catch (Exception ex)
+        {
+            return ApiResult.Fail($"Failed to send Telegram message: {ex.Message}");
+        }
     }
 }

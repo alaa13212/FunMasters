@@ -26,4 +26,7 @@ public interface IAdminApiService
     Task<ApiResult> DeleteBadgeAsync(Guid id);
     Task<ApiResult> AssignBadgeAsync(Guid userId, Guid badgeId);
     Task<ApiResult> RemoveBadgeAsync(Guid userId, Guid badgeId);
+
+    // Telegram
+    Task<ApiResult> SendTelegramMessageAsync(string text, Stream? imageStream, string? imageFileName, string? imageContentType);
 }

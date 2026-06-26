@@ -208,6 +208,34 @@ public static class AdminEndpoints
                 : Results.Json(result, statusCode: 400);
         });
 
+        // POST /api/admin/telegram/send
+        group.MapPost("/telegram/send", async (
+            HttpRequest request,
+            IAdminApiService service) =>
+        {
+            if (!request.HasFormContentType)
+                return Results.Json(ApiResult.Fail("Expected multipart form data"), statusCode: 400);
+
+            var form = await request.ReadFormAsync();
+            var text = form["text"].ToString();
+
+            Stream? imageStream = null;
+            string? imageFileName = null;
+            string? imageContentType = null;
+            var file = form.Files.FirstOrDefault();
+            if (file is { Length: > 0 })
+            {
+                imageStream = file.OpenReadStream();
+                imageFileName = file.FileName;
+                imageContentType = file.ContentType;
+            }
+
+            var result = await service.SendTelegramMessageAsync(text, imageStream, imageFileName, imageContentType);
+            return result.Success
+                ? Results.Json(result)
+                : Results.Json(result, statusCode: 400);
+        });
+
         return group;
     }
 }
