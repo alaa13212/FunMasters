@@ -18,6 +18,14 @@
     </ItemGroup>
 
     <Import Project="Build/tailwind.targets" />
+
+    <ItemGroup>
+        <!-- Tell Visual Studio the Tailwind source counts as a build input. Without this its
+             fast up-to-date check skips the whole project when only CSS changed, Tailwind never
+             re-runs, and edits to input.css silently never reach wwwroot/css/site.css. -->
+        <UpToDateCheckInput Include="Styles/input.css" />
+        <UpToDateCheckBuilt Include="wwwroot/css/site.css" />
+    </ItemGroup>
     
     <ItemGroup>
       <Content Include="..\..\.dockerignore">

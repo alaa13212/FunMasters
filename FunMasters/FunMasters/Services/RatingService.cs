@@ -41,6 +41,7 @@ public class RatingService(
         var ratings = await db.Ratings
             .Include(r => r.Suggestion)
             .ThenInclude(s => s!.SuggestedBy)
+            .Include(r => r.Rater)
             .Where(r => r.RaterId == userId)
             .OrderByDescending(r => r.CreatedAtUtc)
             .ToListAsync();
@@ -49,6 +50,13 @@ public class RatingService(
         var playtimes = await db.SteamPlaytimes
             .Where(sp => sp.UserId == userId && suggestionIds.Contains(sp.SuggestionId))
             .ToDictionaryAsync(sp => sp.SuggestionId);
+
+        var ratingIds = ratings.Select(r => r.Id).ToList();
+        var gemsByRating = await db.Gems
+            .Where(g => ratingIds.Contains(g.RatingId))
+            .GroupBy(g => g.RatingId)
+            .Select(x => new { RatingId = x.Key, Count = x.Count() })
+            .ToDictionaryAsync(x => x.RatingId, x => x.Count);
 
         return ratings.Select(r =>
         {
@@ -64,7 +72,11 @@ public class RatingService(
                 Title = r.Suggestion?.Title ?? "",
                 CoverImageUrl = coverStorage.GetPublicUrl(r.SuggestionId),
                 FinishedAtUtc = r.Suggestion?.FinishedAtUtc,
-                PlaytimeForeverMinutes = pt?.PlaytimeForeverMinutes
+                PlaytimeForeverMinutes = pt?.PlaytimeForeverMinutes,
+                GemCount = gemsByRating.GetValueOrDefault(r.Id),
+                RaterId = r.RaterId,
+                RaterUserName = r.Rater?.UserName,
+                RaterAvatarUrl = avatarStorage.GetPublicUrl(r.RaterId)
             };
         }).ToList();
     }

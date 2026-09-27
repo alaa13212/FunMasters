@@ -16,6 +16,16 @@
 
     <body class="pb-10 min-h-screen flex flex-col">
         <Routes @rendermode="PageRenderMode"/>
+
+        @* Without this element Blazor has nowhere to surface a client-side failure, so the page
+           just stops responding with no message anywhere. *@
+        <div id="blazor-error-ui">
+            <span class="font-bold">Something went wrong.</span>
+            <span id="blazor-error-detail"></span>
+            <a href="." class="reload underline ms-2">Reload</a>
+            <span class="dismiss">✕</span>
+        </div>
+
         <script src="_framework/blazor.web.js"></script>
     </body>
 </html>

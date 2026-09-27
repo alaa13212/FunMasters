@@ -9,27 +9,15 @@
 
     @if (RatingsModel is { Count: > 0 })
     {
-        <h4 class="text-4xl text-center my-4">My Ratings</h4>
-        <div class="grid grid-cols-1 md:grid-cols-fill-[600px] gap-5">
+        <h4 class="text-4xl text-center my-4">
+            My Ratings
+            <span class="badge badge-neutral badge-lg align-middle">@RatingsModel.Count</span>
+        </h4>
+
+        <div class="grid grid-cols-1 md:grid-cols-fill-[460px] gap-5 items-stretch">
             @foreach (var ratingModel in RatingsModel)
             {
-                <div class="@("@container")">
-                    <div class="card @("@xl:card-side") bg-base-300 shadow-xs">
-                        <figure class="@("@xl:w-3/7 @max-xl:max-h-[30vh]")">
-                            <img src="@ratingModel.Rating.CoverImageUrl" alt="@ratingModel.Rating.Title" class="w-full"/>
-                        </figure>
-                        <div class="card-body">
-                            <h3 class="text-xl mb-0 text-primary">@ratingModel.Rating.Title</h3>
-                            <div>
-                                <p class="divider">My Rating</p>
-                                <ReviewForm Model="ratingModel.Form"
-                                            FormName="@("rate-" + ratingModel.Rating.SuggestionId.ToString("n"))"
-                                            SubmitLabel="Update"
-                                            OnValidSubmit="() => UpdateRating(ratingModel)"/>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <ReviewedCard Model="ratingModel" OnSave="UpdateRating"/>
             }
         </div>
     }
@@ -78,9 +66,11 @@
 
             var result = await RatingApi.UpdateRatingAsync(model.Rating.RatingId, request);
 
-            if (!result.Success)
+            if (result.Success)
             {
-                // Handle error - could show message to user
+                // Re-read rather than mirror the form: the server clamps some values (manual
+                // playtime can only increase), so the card must show what was actually stored.
+                RatingsModel = (await RatingApi.GetMyRatingsAsync()).Select(r => new RatingModel(r)).ToList();
             }
         }
         catch (Exception)

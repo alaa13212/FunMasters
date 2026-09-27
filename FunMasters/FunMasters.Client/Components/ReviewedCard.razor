@@ -1,0 +1,149 @@
+@using FunMasters.Shared.DTOs
+@using System.Globalization
+
+@* A finished verdict, as a self-contained card: the cover fills the left edge, everything else
+   sits on the right, and every card is the same height so the wall stays even. The pen swaps the
+   right-hand side for the edit form. Reusable anywhere a delivered verdict is shown. *@
+<div class="card bg-base-300 shadow-sm overflow-hidden @(Editing ? "" : "fm-verdict-fixed") @(Compact ? "fm-verdict-sm" : "")">
+
+    @if (Editing)
+    {
+        <div class="p-4">
+            <div class="flex items-center justify-between gap-3 mb-3">
+                <h3 class="text-xl text-primary leading-tight min-w-0 break-words">@Model.Rating.Title</h3>
+                <button type="button" class="btn btn-ghost btn-sm" @onclick="StopEditing">Cancel</button>
+            </div>
+            <ReviewForm Model="Model.Form"
+                        FormName="@("rate-" + Model.Rating.SuggestionId.ToString("n"))"
+                        SubmitLabel="Update"
+                        OnValidSubmit="Save"/>
+        </div>
+    }
+    else
+    {
+        <div class="flex h-full">
+            @if (!string.IsNullOrEmpty(Model.Rating.CoverImageUrl))
+            {
+                @* Full bleed: no padding, no radius, flush to the card's own edges. *@
+                <a href="/game/@Model.Rating.SuggestionId" class="fm-cover-bleed shrink-0">
+                    <img src="@Model.Rating.CoverImageUrl" alt="@Model.Rating.Title"
+                         class="w-full h-full object-cover"/>
+                </a>
+            }
+
+            <div class="flex-1 min-w-0 flex flex-col gap-2 @(Compact ? "p-3" : "p-4")">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <h3 class="text-primary leading-tight break-words @(Compact ? "text-base" : "text-xl")">
+                            <a href="/game/@Model.Rating.SuggestionId" class="hover:underline">@Model.Rating.Title</a>
+                        </h3>
+                        @if (!string.IsNullOrEmpty(Model.Rating.RaterUserName))
+                        {
+                            <a href="/funmaster/@Model.Rating.RaterId"
+                               class="flex items-center gap-1.5 mt-0.5 opacity-60 hover:opacity-100 w-fit">
+                                <img src="@Model.Rating.RaterAvatarUrl" alt="" class="w-4 h-4 mask mask-squircle"/>
+                                <span class="text-sm">@Model.Rating.RaterUserName</span>
+                            </a>
+                        }
+                    </div>
+
+                    <div class="flex items-center gap-2 shrink-0">
+                        <div class="fm-stat fm-stat-score" title="@($"{Model.Rating.DecimalScore:0.#} out of 10")">
+                            <span class="fm-stat-value">@Model.Rating.DecimalScore.ToString("0.#", CultureInfo.InvariantCulture)</span>
+                            <span class="fm-stat-sub">@Model.Rating.RatingLabel</span>
+                        </div>
+                        @if (Model.Rating.PlaytimeForeverMinutes is > 0)
+                        {
+                            <div class="fm-stat" title="@($"{PlaytimeUtils.FormatMinutes(Model.Rating.PlaytimeForeverMinutes)} played")">
+                                <svg viewBox="0 0 16 16" fill="currentColor" class="w-3.5 h-3.5">
+                                    <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z"/>
+                                    <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0"/>
+                                </svg>
+                                <span class="fm-stat-sub">@HoursPlayed</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 border-b border-base-content/10 pb-1 shrink-0">
+                    <span class="text-sm uppercase tracking-wide opacity-60">Review</span>
+                    @if (Model.Rating.GemCount > 0)
+                    {
+                        <span class="fm-gem-count" title="@($"{Model.Rating.GemCount} gem(s) from the Council")">
+                            <svg viewBox="0 0 16 16" fill="currentColor" class="w-3.5 h-3.5">
+                                <path d="M3.1 1.3A.5.5 0 0 1 3.5 1h9a.5.5 0 0 1 .4.2l2.5 3.2a.5.5 0 0 1-.03.65l-7 7.5a.5.5 0 0 1-.73 0l-7-7.5A.5.5 0 0 1 .6 4.5z"/>
+                            </svg>
+                            @Model.Rating.GemCount
+                        </span>
+                    }
+                    <span class="flex-1"></span>
+                    @if (CanEdit)
+                    {
+                        <button type="button" class="btn btn-ghost btn-xs px-1" aria-label="Edit this verdict"
+                                @onclick="StartEditing">
+                            <svg viewBox="0 0 16 16" fill="currentColor" class="w-4 h-4">
+                                <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325"/>
+                            </svg>
+                        </button>
+                    }
+                </div>
+
+                @* Takes the leftover height and clips, so the card can never grow. *@
+                <div class="flex-1 min-h-0 overflow-hidden">
+                    @if (string.IsNullOrWhiteSpace(Model.Rating.Comment))
+                    {
+                        <p class="opacity-50 italic text-sm">No review written.</p>
+                    }
+                    else
+                    {
+                        <p class="whitespace-pre-line text-sm leading-relaxed">@Preview</p>
+                    }
+                </div>
+
+                @if (IsTruncated)
+                {
+                    <a href="/game/@Model.Rating.SuggestionId" class="link link-primary text-sm shrink-0">Read the rest</a>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    /// How much of a review a card prints before it is cut, matched to the card height set by
+    /// --fm-card-h in input.css. Raise both together if you want more text on screen.
+    public const int PreviewLength = 520;
+    public const int CompactPreviewLength = 200;
+
+    [Parameter, EditorRequired] public RatingModel Model { get; set; } = null!;
+
+    /// False renders the card read-only - for profiles and anywhere it is not the viewer's verdict.
+    [Parameter] public bool CanEdit { get; set; } = true;
+
+    /// Half height, for places that list verdicts alongside other things rather than as the page.
+    [Parameter] public bool Compact { get; set; }
+
+    [Parameter] public EventCallback<RatingModel> OnSave { get; set; }
+
+    private bool Editing { get; set; }
+
+    private int PrintedLength => Compact ? CompactPreviewLength : PreviewLength;
+
+    private bool IsTruncated => (Model.Rating.Comment?.Length ?? 0) > PrintedLength;
+
+    private string Preview => IsTruncated
+        ? Model.Rating.Comment![..PrintedLength].TrimEnd() + "…"
+        : Model.Rating.Comment ?? "";
+
+    private string HoursPlayed =>
+        ((Model.Rating.PlaytimeForeverMinutes ?? 0) / 60m).ToString("0.#", CultureInfo.InvariantCulture);
+
+    private void StartEditing() => Editing = true;
+    private void StopEditing() => Editing = false;
+
+    private async Task Save()
+    {
+        await OnSave.InvokeAsync(Model);
+        Editing = false;
+    }
+}

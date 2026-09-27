@@ -224,6 +224,11 @@ public class AccountService(
 
         var ratingIds = reviewedRatings.Select(r => r.Id).ToList();
 
+        // The card shows hours played; the profile projection never supplied them before.
+        var playtimeBySuggestion = await db.SteamPlaytimes
+            .Where(sp => sp.UserId == userId && sp.PlaytimeForeverMinutes != null)
+            .ToDictionaryAsync(sp => sp.SuggestionId, sp => (int?)sp.PlaytimeForeverMinutes);
+
         // Side-loaded once and stitched in, rather than counted per review.
         var gemsByRating = await db.Gems
             .Where(g => ratingIds.Contains(g.RatingId))
@@ -241,7 +246,11 @@ public class AccountService(
             SuggestionId = r.SuggestionId,
             Title = r.Suggestion?.Title ?? "",
             CoverImageUrl = coverStorage.GetPublicUrl(r.SuggestionId),
-            GemCount = gemsByRating.GetValueOrDefault(r.Id)
+            GemCount = gemsByRating.GetValueOrDefault(r.Id),
+            PlaytimeForeverMinutes = playtimeBySuggestion.GetValueOrDefault(r.SuggestionId),
+            RaterId = user.Id,
+            RaterUserName = user.UserName,
+            RaterAvatarUrl = avatarStorage.GetPublicUrl(user.Id)
         };
 
         // Criminal record, by the same rules the member roll and the reminder job use.

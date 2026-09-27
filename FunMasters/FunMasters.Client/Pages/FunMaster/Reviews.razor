@@ -1,0 +1,74 @@
+@page "/funmaster/{UserId:guid}/reviews"
+@using FunMasters.Client.Components
+@inject IAccountApiService AccountApi
+
+@* Every verdict a member has delivered. Deliberately the same container, grid and card as
+   My Ratings so the two pages read identically — only read-only, so no pen. *@
+<PageTitle>@(_profile is null ? "Reviews" : $"{_profile.UserName}'s Reviews")</PageTitle>
+
+<div class="m-5">
+    @if (_loading)
+    {
+        <p>Loading...</p>
+    }
+    else if (_profile == null)
+    {
+        <h3>Fun Master not found</h3>
+    }
+    else
+    {
+        <a href="/funmaster/@UserId" class="btn btn-ghost btn-sm">
+            <span aria-hidden="true">&laquo;</span> Back to profile
+        </a>
+
+        <h4 class="text-4xl text-center my-4">
+            @(_profile.UserName)'s Reviews
+            <span class="badge badge-neutral badge-lg align-middle">@_profile.ReviewedGames.Count</span>
+        </h4>
+
+        @if (_profile.ReviewedGames.Any())
+        {
+            <div class="grid grid-cols-1 md:grid-cols-fill-[460px] gap-5 items-stretch">
+                @foreach (var review in _profile.ReviewedGames)
+                {
+                    <ReviewedCard Model="@(new RatingModel(review))" CanEdit="false"/>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="opacity-60 text-center">No verdicts delivered yet.</p>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public Guid UserId { get; set; }
+
+    [PersistentState] public FunMasterProfileDto? _profile { get; set; }
+
+    private bool _loading = true;
+
+    /// <summary>
+    /// Loaded here rather than in OnInitializedAsync: the component is reused when only the route
+    /// parameter changes, so moving between members would otherwise leave the previous one on screen.
+    /// </summary>
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_profile != null && _profile.Id == UserId)
+        {
+            _loading = false;
+            return;
+        }
+
+        _loading = true;
+        _profile = null;
+
+        try
+        {
+            _profile = await AccountApi.GetFunMasterProfileAsync(UserId);
+        }
+        catch { }
+        finally { _loading = false; }
+    }
+}

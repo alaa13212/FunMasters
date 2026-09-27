@@ -186,3 +186,273 @@
     --font-serif: 'EB Garamond', 'Times New Roman', Times, Georgia, serif;
     font-family: 'EB Garamond', 'Times New Roman', Times, Georgia, serif;
 }
+/* ── The verdict dial ────────────────────────────────────────────────────────
+   A native range thumb cannot hold text, so the real input is laid over the
+   track at zero opacity — it still handles dragging, arrow keys and focus —
+   and the visible dial is a div positioned from --fm-pct. */
+.fm-range {
+    --fm-pct: 0;
+    --fm-thumb: 2rem;          /* resting diameter */
+    --fm-thumb-active: 4rem;   /* while being dragged */
+
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: var(--fm-thumb-active);
+    width: 100%;
+}
+
+/* A third the thickness of daisyUI's range track. */
+.fm-range-track {
+    position: absolute;
+    inset-inline: 0;
+    height: 0.3rem;
+    border-radius: 999px;
+    background: var(--color-base-300);
+    overflow: hidden;
+}
+
+.fm-range-fill {
+    height: 100%;
+    width: calc(var(--fm-pct) * 1%);
+    border-radius: 999px;
+    background: var(--color-primary);
+}
+
+.fm-range input[type="range"] {
+    position: absolute;
+    inset-inline: 0;
+    width: 100%;
+    height: var(--fm-thumb-active);
+    margin: 0;
+    opacity: 0;
+    cursor: grab;
+    z-index: 2;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+}
+.fm-range input[type="range"]:active { cursor: grabbing; }
+
+/* The invisible thumb keeps the resting diameter so the dial tracks the pointer. */
+.fm-range input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: var(--fm-thumb);
+    height: var(--fm-thumb);
+    border-radius: 50%;
+}
+.fm-range input[type="range"]::-moz-range-thumb {
+    width: var(--fm-thumb);
+    height: var(--fm-thumb);
+    border: 0;
+    border-radius: 50%;
+}
+
+.fm-range-thumb {
+    position: absolute;
+    top: 50%;
+    /* A thumb never reaches the very edge; this keeps the dial over it at both ends. */
+    left: calc(var(--fm-pct) * 1% + (50 - var(--fm-pct)) * var(--fm-thumb) / 100);
+    transform: translate(-50%, -50%);
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: var(--fm-thumb);
+    height: var(--fm-thumb);
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: var(--color-primary-content);
+    font-weight: 700;
+    font-size: 0.75rem;
+    line-height: 1;
+    pointer-events: none;
+    z-index: 3;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.4);
+    transition: width 140ms ease, height 140ms ease, font-size 140ms ease, box-shadow 140ms ease;
+}
+
+.fm-range.is-active .fm-range-thumb {
+    width: var(--fm-thumb-active);
+    height: var(--fm-thumb-active);
+    font-size: 1.15rem;
+    box-shadow: 0 5px 14px rgb(0 0 0 / 0.45);
+}
+
+/* Gloss appears only once the dial has grown enough to carry it. */
+.fm-range.is-active .fm-range-thumb::before {
+    content: "";
+    position: absolute;
+    inset: 5%;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 32% 24%, rgb(255 255 255 / 0.38), rgb(255 255 255 / 0.07) 38%, transparent 58%),
+        linear-gradient(to bottom, rgb(255 255 255 / 0.14), transparent 50%);
+}
+
+.fm-range-value { position: relative; z-index: 1; }
+
+/* The word only fits once the dial is large. */
+.fm-range-word {
+    position: relative;
+    z-index: 1;
+    height: 0;
+    opacity: 0;
+    overflow: hidden;
+    max-width: 92%;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    transition: opacity 120ms ease;
+}
+.fm-range.is-active .fm-range-word {
+    height: auto;
+    opacity: 0.9;
+    margin-top: 0.15rem;
+}
+
+/* ── Verdict card stat discs ─────────────────────────────────────────────── */
+.fm-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.05rem;
+    width: 2.9rem;
+    height: 2.9rem;
+    border-radius: 50%;
+    background: var(--color-base-100);
+    border: 1px solid color-mix(in oklch, var(--color-base-content) 12%, transparent);
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+/* The score reads largest — it is the verdict. Same treatment as the dial it was set with. */
+.fm-stat-score {
+    position: relative;
+    width: 3.4rem;
+    height: 3.4rem;
+    background: var(--color-primary);
+    color: var(--color-primary-content);
+    border-color: transparent;
+    box-shadow: 0 3px 10px rgb(0 0 0 / 0.35);
+    overflow: hidden;
+}
+
+.fm-stat-score::before {
+    content: "";
+    position: absolute;
+    inset: 5%;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 32% 24%, rgb(255 255 255 / 0.38), rgb(255 255 255 / 0.07) 38%, transparent 58%),
+        linear-gradient(to bottom, rgb(255 255 255 / 0.14), transparent 50%);
+}
+
+.fm-stat-score > * { position: relative; z-index: 1; }
+
+.fm-stat-value { font-size: 1.2rem; font-weight: 700; }
+
+.fm-stat-sub {
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    opacity: 0.85;
+    max-width: 92%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fm-stat-gem { color: var(--color-warning); }
+
+/* Gem tally beside the Review heading. */
+.fm-gem-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--color-warning);
+}
+
+/* ── Verdict card cover ──────────────────────────────────────────────────────
+   The cover is the one element that can grow for free: it stretches to the
+   height of the review beside it, so a longer review makes a bigger image.
+   Width is the only dimension that competes with the text — change
+   --fm-cover-w to trade them against each other. */
+.fm-verdict-body {
+    --fm-cover-w: 10rem;
+    /* Keeps the cover worth looking at when the review is a single line. */
+    min-height: calc(var(--fm-cover-w) * 1.5);
+}
+
+.fm-cover {
+    width: var(--fm-cover-w);
+    display: block;
+}
+
+@media (max-width: 40rem) {
+    /* Stacked on a phone: height is no longer shared, so cap it. */
+    .fm-verdict-body { min-height: 0; }
+    .fm-cover { width: 100%; max-width: var(--fm-cover-w); align-self: flex-start !important; }
+    .fm-cover img { height: auto; }
+}
+
+/* ── Client-side error bar ───────────────────────────────────────────────────
+   Blazor unhides #blazor-error-ui when something fails in the browser. Without
+   the element the failure is completely silent: the page renders but stops
+   responding, with nothing in the UI to say why. */
+#blazor-error-ui {
+    display: none;
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 1000;
+    padding: 0.7rem 1.25rem;
+    background: var(--color-error);
+    color: var(--color-error-content);
+    box-shadow: 0 -2px 10px rgb(0 0 0 / 0.35);
+}
+
+#blazor-error-ui .dismiss {
+    position: absolute;
+    inset-inline-end: 0.9rem;
+    top: 0.6rem;
+    cursor: pointer;
+}
+
+/* ── Full-bleed verdict card ─────────────────────────────────────────────────
+   Every card is the same height so the wall stays even: the review takes the
+   leftover space and clips, rather than pushing the card taller. --fm-card-h
+   and --fm-bleed-w are the two knobs. */
+.fm-verdict-fixed {
+    --fm-card-h: 19.5rem;  /* card height - the main knob for how much review fits */
+    --fm-bleed-w: 13rem;   /* how much of the left edge the cover takes */
+    height: var(--fm-card-h);
+}
+
+.fm-cover-bleed {
+    display: block;
+    width: var(--fm-bleed-w);
+    height: 100%;
+}
+
+@media (max-width: 40rem) {
+    /* Narrow screens: a fixed height squeezes the text too hard. */
+    .fm-verdict-fixed { --fm-card-h: 17rem; --fm-bleed-w: 9rem; }
+}
+
+/* Half-height verdict card, for lists that sit alongside other content. */
+.fm-verdict-fixed.fm-verdict-sm {
+    --fm-card-h: 9.75rem;
+    --fm-bleed-w: 6.5rem;
+}
+
+.fm-verdict-sm .fm-stat-score { width: 2.6rem; height: 2.6rem; }
+.fm-verdict-sm .fm-stat { width: 2.2rem; height: 2.2rem; }
+.fm-verdict-sm .fm-stat-value { font-size: 0.9rem; }
+.fm-verdict-sm .fm-stat-sub { font-size: 0.45rem; }

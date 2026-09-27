@@ -24,4 +24,9 @@ public class UserRatingDto
 
     // Gems this review has drawn from other members
     public int GemCount { get; set; }
+
+    // Who delivered the verdict — the card is reused where that is not the viewer.
+    public Guid RaterId { get; set; }
+    public string? RaterUserName { get; set; }
+    public string? RaterAvatarUrl { get; set; }
 }
