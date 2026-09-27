@@ -18,9 +18,11 @@ public class UserRatingDto
     public string Title { get; set; } = null!;
     public string? CoverImageUrl { get; set; }
     public DateTime? FinishedAtUtc { get; set; }
+    public SuggestionStatus Status { get; set; }
 
     // Playtime info (from SteamPlaytime record, may be manually set)
     public int? PlaytimeForeverMinutes { get; set; }
+    public int? Playtime2WeeksMinutes { get; set; }
 
     // Gems this review has drawn from other members
     public int GemCount { get; set; }

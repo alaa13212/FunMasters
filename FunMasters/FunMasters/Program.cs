@@ -116,6 +116,7 @@ builder.Services.AddScoped<IIgdbApiService, IgdbApiService>();
 builder.Services.AddScoped<IHltbApiService, HltbApiService>();
 builder.Services.AddScoped<IGemApiService, GemService>();
 builder.Services.AddScoped<IMemberApiService, MemberService>();
+builder.Services.AddScoped<IPublicDataApiService, PublicDataService>();
 
 var app = builder.Build();
 
@@ -172,6 +173,7 @@ app.MapHltbEndpoints();
 app.MapSteamEndpoints();
 app.MapGemEndpoints();
 app.MapMemberEndpoints();
+app.MapPublicDataEndpoints();
 
 using (var scope = app.Services.CreateScope()) {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();

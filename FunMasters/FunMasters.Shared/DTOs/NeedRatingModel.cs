@@ -11,5 +11,6 @@ public class NeedRatingModel
     public NeedRatingModel(SuggestionDto suggestion)
     {
         Suggestion = suggestion;
+        Form.ShowPlaytime2Weeks = ReviewFormModel.HasActiveWindow(suggestion.Status);
     }
 }

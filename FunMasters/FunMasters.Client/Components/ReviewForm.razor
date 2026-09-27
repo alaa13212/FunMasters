@@ -32,10 +32,26 @@
         <label for="@("rate-comment-" + FormName)" class="form-label"></label>
     </div>
     <fieldset class="fieldset">
-        <legend class="fieldset-legend">Hours Played</legend>
+        <legend class="fieldset-legend">Total Playtime</legend>
         <input type="number" @bind="Model.PlaytimeHours" @bind:event="oninput"
                class="input w-full" min="0" step="0.1" placeholder="Optional"/>
+        <p class="fieldset-label">Every hour you have ever spent on this title.</p>
     </fieldset>
+    @if (Model.ShowPlaytime2Weeks)
+    {
+        @* Steam reports the last fortnight, the Council reports the fortnight the title was active,
+           and members reasonably read the two as the same figure. Say which one this is. *@
+        <fieldset class="fieldset">
+            <legend class="fieldset-legend">Playtime In The Active Window</legend>
+            <input type="number" @bind="Model.Playtime2WeeksHours" @bind:event="oninput"
+                   class="input w-full" min="0" step="0.1" placeholder="Optional"/>
+            <p class="fieldset-label">
+                Only the hours you played during the game's own active duration - the stretch between
+                its start and end dates. It is not "the last two weeks"; a game that concluded months ago
+                still reports what you played while it was before the Council.
+            </p>
+        </fieldset>
+    }
     <div>
         <button type="submit" class="btn btn-lg btn-primary w-full mt-3" disabled="@Model.IsSubmitting">
             @if (Model.IsSubmitting)

@@ -72,7 +72,9 @@ public class RatingService(
                 Title = r.Suggestion?.Title ?? "",
                 CoverImageUrl = coverStorage.GetPublicUrl(r.SuggestionId),
                 FinishedAtUtc = r.Suggestion?.FinishedAtUtc,
+                Status = r.Suggestion?.Status ?? SuggestionStatus.Pending,
                 PlaytimeForeverMinutes = pt?.PlaytimeForeverMinutes,
+                Playtime2WeeksMinutes = pt?.Playtime2WeeksMinutes,
                 GemCount = gemsByRating.GetValueOrDefault(r.Id),
                 RaterId = r.RaterId,
                 RaterUserName = r.Rater?.UserName,
@@ -113,8 +115,9 @@ public class RatingService(
         db.Ratings.Add(rating);
         await db.SaveChangesAsync();
 
-        if (request.ManualPlaytimeMinutes.HasValue)
-            await UpsertManualPlaytimeAsync(userId, request.SuggestionId, request.ManualPlaytimeMinutes.Value);
+        if (request.ManualPlaytimeMinutes.HasValue || request.ManualPlaytime2WeeksMinutes.HasValue)
+            await UpsertManualPlaytimeAsync(userId, request.SuggestionId,
+                request.ManualPlaytimeMinutes, request.ManualPlaytime2WeeksMinutes);
 
         await CheckAllRatingsInAsync(request.SuggestionId);
 
@@ -141,8 +144,9 @@ public class RatingService(
 
         await db.SaveChangesAsync();
 
-        if (request.ManualPlaytimeMinutes.HasValue)
-            await UpsertManualPlaytimeAsync(userId, rating.SuggestionId, request.ManualPlaytimeMinutes.Value);
+        if (request.ManualPlaytimeMinutes.HasValue || request.ManualPlaytime2WeeksMinutes.HasValue)
+            await UpsertManualPlaytimeAsync(userId, rating.SuggestionId,
+                request.ManualPlaytimeMinutes, request.ManualPlaytime2WeeksMinutes);
 
         return ApiResult.Ok();
     }
@@ -174,8 +178,12 @@ public class RatingService(
             suggestion.Title, avg, label, suggestion.Ratings.Count);
     }
 
-    private async Task UpsertManualPlaytimeAsync(Guid userId, Guid suggestionId, int manualMinutes)
+    private async Task UpsertManualPlaytimeAsync(
+        Guid userId, Guid suggestionId, int? foreverMinutes, int? activeWindowMinutes)
     {
+        if (!foreverMinutes.HasValue && !activeWindowMinutes.HasValue)
+            return;
+
         var existing = await db.SteamPlaytimes
             .FirstOrDefaultAsync(sp => sp.UserId == userId && sp.SuggestionId == suggestionId);
 
@@ -190,12 +198,17 @@ public class RatingService(
             db.SteamPlaytimes.Add(existing);
         }
 
-        // Only set if manually entered value is higher than what is already stored
-        if (!existing.PlaytimeForeverMinutes.HasValue || manualMinutes > existing.PlaytimeForeverMinutes.Value)
+        // Taken as given, including downward: a member editing their own verdict is correcting the
+        // record, not topping it up, and a form that refused to lower a figure would not be editing.
+        // Never clobbering a higher stored value is the Steam refresh path's concern, and it lives there.
+        if (foreverMinutes.HasValue)
         {
-            existing.PlaytimeForeverMinutes = manualMinutes;
+            existing.PlaytimeForeverMinutes = foreverMinutes.Value;
             existing.ErrorMessage = null;
         }
+
+        if (activeWindowMinutes.HasValue)
+            existing.Playtime2WeeksMinutes = activeWindowMinutes.Value;
 
         await db.SaveChangesAsync();
     }

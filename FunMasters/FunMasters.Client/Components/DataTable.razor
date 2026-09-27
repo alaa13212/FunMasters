@@ -1,0 +1,83 @@
+@typeparam T
+@* A table that refuses to render ten thousand rows at once. The public data page hands over whole
+   tables; without a pager the browser pays for every row on a page nobody will ever scroll to. *@
+<div class="flex flex-col gap-2">
+    <div class="overflow-auto rounded-box border border-base-content/5 bg-base-100 max-h-[32rem]">
+        <table class="table table-zebra table-sm">
+            <thead class="sticky top-0 z-10 bg-base-100">
+                <tr>@Header</tr>
+            </thead>
+            <tbody>
+                @if (Items.Count == 0)
+                {
+                    <tr>
+                        <td class="opacity-50 italic" colspan="@Columns">Nothing recorded yet.</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var item in PageItems)
+                    {
+                        <tr>@Row(item)</tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <span class="text-sm opacity-70">@Summary</span>
+        @if (TotalPages > 1)
+        {
+            <div class="join">
+                <button type="button" class="join-item btn btn-sm" disabled="@(_page == 0)"
+                        aria-label="Previous page" @onclick="Previous">«</button>
+                <span class="join-item btn btn-sm btn-disabled no-animation">@(_page + 1) / @TotalPages</span>
+                <button type="button" class="join-item btn btn-sm" disabled="@(_page >= TotalPages - 1)"
+                        aria-label="Next page" @onclick="Next">»</button>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<T> Items { get; set; } = [];
+
+    [Parameter] public RenderFragment? Header { get; set; }
+
+    [Parameter, EditorRequired] public RenderFragment<T> Row { get; set; } = null!;
+
+    /// <summary>Column count, so the empty row can span the table.</summary>
+    [Parameter] public int Columns { get; set; } = 1;
+
+    [Parameter] public int PageSize { get; set; } = 50;
+
+    private int _page;
+
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(Items.Count / (double)PageSize));
+
+    private List<T> PageItems
+    {
+        get
+        {
+            // Clamped rather than reset: a shrinking Items list must not leave the pager on a page
+            // that no longer exists and render nothing at all.
+            var page = Math.Clamp(_page, 0, TotalPages - 1);
+            return Items.Skip(page * PageSize).Take(PageSize).ToList();
+        }
+    }
+
+    private string Summary
+    {
+        get
+        {
+            if (Items.Count == 0) return "0 rows";
+            var first = PageItems.Count == 0 ? 0 : Math.Clamp(_page, 0, TotalPages - 1) * PageSize + 1;
+            return $"Showing {first}–{first + PageItems.Count - 1} of {Items.Count}";
+        }
+    }
+
+    private void Previous() => _page = Math.Max(0, _page - 1);
+
+    private void Next() => _page = Math.Min(TotalPages - 1, _page + 1);
+}

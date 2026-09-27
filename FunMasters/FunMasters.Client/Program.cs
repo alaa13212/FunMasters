@@ -26,5 +26,6 @@ builder.Services.AddScoped<IHltbApiService, HltbApiService>();
 builder.Services.AddScoped<ISteamApiService, SteamApiService>();
 builder.Services.AddScoped<IGemApiService, GemApiService>();
 builder.Services.AddScoped<IMemberApiService, MemberApiService>();
+builder.Services.AddScoped<IPublicDataApiService, PublicDataApiService>();
 
 await builder.Build().RunAsync();

@@ -45,6 +45,10 @@
                 Comment = model.Form.Comment,
                 ManualPlaytimeMinutes = model.Form.PlaytimeHours.HasValue
                     ? (int)(model.Form.PlaytimeHours.Value * 60)
+                    : null,
+                ManualPlaytime2WeeksMinutes = model.Form.ShowPlaytime2Weeks
+                                              && model.Form.Playtime2WeeksHours.HasValue
+                    ? (int)(model.Form.Playtime2WeeksHours.Value * 60)
                     : null
             };
 

@@ -25,8 +25,28 @@ public class ReviewFormModel
     public bool HasScore { get; set; }
 
     public string? Comment { get; set; }
+
+    /// <summary>Lifetime playtime, in hours.</summary>
     public decimal? PlaytimeHours { get; set; }
+
+    /// <summary>
+    /// Playtime inside the title's active window, in hours. Only meaningful while the title is
+    /// before the Council or at the moment it concluded, so forms that have nothing to say about
+    /// that window leave <see cref="ShowPlaytime2Weeks"/> off and never show the field.
+    /// </summary>
+    public decimal? Playtime2WeeksHours { get; set; }
+
+    /// <summary>Whether this form offers the active-window playtime field alongside the lifetime one.</summary>
+    public bool ShowPlaytime2Weeks { get; set; }
+
     public bool IsSubmitting { get; set; }
 
     public string GetRatingLabel() => RatingUtils.GetRatingLabel((int)(Score * 10));
+
+    /// <summary>
+    /// Whether a title's active window - the stretch the Council gave it to be played - has begun.
+    /// Only then can anyone say how much playtime fell inside it, so only then is the field offered.
+    /// </summary>
+    public static bool HasActiveWindow(SuggestionStatus status) =>
+        status is SuggestionStatus.Active or SuggestionStatus.Finished;
 }

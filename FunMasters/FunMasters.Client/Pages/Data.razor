@@ -1,0 +1,212 @@
+@page "/data"
+@using System.Globalization
+@inject IPublicDataApiService PublicDataApi
+
+<PageTitle>Public Data</PageTitle>
+
+<div class="max-w-[1200px] m-auto mt-6 px-2 pb-10">
+    <h1 class="text-3xl text-primary mb-2">Public Data</h1>
+    <p class="opacity-70 max-w-[70ch]">
+        Everything the Council keeps that is not somebody's private business: who is a member, what
+        the Council is playing and has played, every verdict delivered, and the playtime it has on
+        record. Take it with you — each table exports as its own CSV.
+    </p>
+    <p class="opacity-60 max-w-[70ch] mt-2 mb-6 text-sm">
+        Email addresses, password material and profile drafts are not here and never will be.
+        Suggestions that have not yet been put before the Council stay off the list until they are.
+        For suggestions, only the window the Council gave a title is published — when it went up and
+        when it came down.
+    </p>
+
+    @if (Records == null)
+    {
+        <p class="opacity-60">Loading the Council's records...</p>
+    }
+    else
+    {
+        <div class="stats stats-vertical sm:stats-horizontal shadow w-full mb-8 bg-base-200">
+            <div class="stat">
+                <div class="stat-title">Users</div>
+                <div class="stat-value text-2xl">@Records.Users.Count</div>
+            </div>
+            <div class="stat">
+                <div class="stat-title">Suggestions</div>
+                <div class="stat-value text-2xl">@Records.Suggestions.Count</div>
+            </div>
+            <div class="stat">
+                <div class="stat-title">Ratings</div>
+                <div class="stat-value text-2xl">@Records.Ratings.Count</div>
+            </div>
+            <div class="stat">
+                <div class="stat-title">Playtime records</div>
+                <div class="stat-value text-2xl">@Records.Playtimes.Count</div>
+            </div>
+        </div>
+
+        <h2 class="text-2xl mb-2">Users</h2>
+        <div class="flex justify-end mb-2">
+            <a class="btn btn-sm btn-outline gap-2" href="/api/public-data/export/users.csv" download>
+                Export users (CSV)
+            </a>
+        </div>
+        <DataTable Items="Records.Users" Columns="6" PageSize="25">
+            <Header>
+                <th>User</th>
+                <th>Standing</th>
+                <th class="text-center">Order</th>
+                <th>Joined</th>
+                <th>Steam ID</th>
+                <th>Id</th>
+            </Header>
+            <Row Context="u">
+                <td>
+                    <a href="/funmaster/@u.Id" class="link link-primary">@u.UserName</a>
+                </td>
+                <td>@u.CouncilStatus</td>
+                <td class="text-center">@(u.CycleOrder > 0 ? u.CycleOrder.ToString(CultureInfo.InvariantCulture) : "—")</td>
+                <td class="whitespace-nowrap">@Fmt(u.RegistrationDateUtc)</td>
+                <td class="font-mono text-xs">
+                    @if (u.SteamId != null)
+                    {
+                        <a href="@($"https://steamcommunity.com/profiles/{u.SteamId}")" target="_blank"
+                           rel="noopener noreferrer" class="link">@u.SteamId</a>
+                    }
+                    else
+                    {
+                        <span class="opacity-40">—</span>
+                    }
+                </td>
+                <td class="font-mono text-xs opacity-60">@u.Id</td>
+            </Row>
+        </DataTable>
+
+        <h2 class="text-2xl mt-8 mb-2">Suggestions</h2>
+        <div class="flex justify-end mb-2">
+            <a class="btn btn-sm btn-outline gap-2" href="/api/public-data/export/suggestions.csv" download>
+                Export suggestions (CSV)
+            </a>
+        </div>
+        <DataTable Items="Records.Suggestions" Columns="5" PageSize="25">
+            <Header>
+                <th>Title</th>
+                <th>Status</th>
+                <th>Started</th>
+                <th>Finished</th>
+                <th>Id</th>
+            </Header>
+            <Row Context="s">
+                <td>
+                    <a href="/game/@s.Id" class="link link-primary">@s.Title</a>
+                </td>
+                <td>@s.Status</td>
+                <td class="whitespace-nowrap">@Fmt(s.ActiveAtUtc)</td>
+                <td class="whitespace-nowrap">@Fmt(s.FinishedAtUtc)</td>
+                <td class="font-mono text-xs opacity-60">@s.Id</td>
+            </Row>
+        </DataTable>
+
+        <h2 class="text-2xl mt-8 mb-2">Ratings</h2>
+        <div class="flex justify-end mb-2">
+            <a class="btn btn-sm btn-outline gap-2" href="/api/public-data/export/ratings.csv" download>
+                Export ratings (CSV)
+            </a>
+        </div>
+        <DataTable Items="Records.Ratings" Columns="6" PageSize="25">
+            <Header>
+                <th>Title</th>
+                <th>Fun Master</th>
+                <th class="text-center">Score</th>
+                <th>Review</th>
+                <th>Delivered</th>
+                <th>Id</th>
+            </Header>
+            <Row Context="r">
+                <td>
+                    <a href="/game/@r.SuggestionId" class="link link-primary">@r.SuggestionTitle</a>
+                </td>
+                <td>
+                    <a href="/funmaster/@r.RaterId" class="link">@r.RaterUserName</a>
+                </td>
+                <td class="text-center" title="@(RatingUtils.GetRatingLabel(r.Score))">
+                    @((r.Score / 10m).ToString("0.#", CultureInfo.InvariantCulture))
+                </td>
+                <td class="max-w-[30rem]">
+                    @if (string.IsNullOrWhiteSpace(r.Comment))
+                    {
+                        <span class="opacity-40 italic">No review written.</span>
+                    }
+                    else if (r.Comment.Length > PreviewLength)
+                    {
+                        @* Reviews run to 50,000 characters; the full text stays on the game's page. *@
+                        <span>@r.Comment[..PreviewLength].TrimEnd()<span class="opacity-50">…</span></span>
+                    }
+                    else
+                    {
+                        @r.Comment
+                    }
+                </td>
+                <td class="whitespace-nowrap">@Fmt(r.CreatedAtUtc)</td>
+                <td class="font-mono text-xs opacity-60">@r.Id</td>
+            </Row>
+        </DataTable>
+
+        <h2 class="text-2xl mt-8 mb-2">Steam playtime</h2>
+        <p class="opacity-60 max-w-[70ch] mb-2 text-sm">
+            The first column is lifetime playtime on the title. The second is the playtime that fell
+            inside the title's own active window — the stretch between its start and end dates — not
+            the last two weeks as Steam counts them.
+        </p>
+        <div class="flex justify-end mb-2">
+            <a class="btn btn-sm btn-outline gap-2" href="/api/public-data/export/playtimes.csv" download>
+                Export playtime (CSV)
+            </a>
+        </div>
+        <DataTable Items="Records.Playtimes" Columns="6" PageSize="25">
+            <Header>
+                <th>Title</th>
+                <th>Fun Master</th>
+                <th class="text-center">Total</th>
+                <th class="text-center">Active window</th>
+                <th>Captured</th>
+                <th>Id</th>
+            </Header>
+            <Row Context="p">
+                <td>
+                    <a href="/game/@p.SuggestionId" class="link link-primary">@p.SuggestionTitle</a>
+                </td>
+                <td>
+                    <a href="/funmaster/@p.UserId" class="link">@p.UserName</a>
+                </td>
+                <td class="text-center">@PlaytimeUtils.FormatMinutes(p.PlaytimeForeverMinutes)</td>
+                <td class="text-center">@PlaytimeUtils.FormatMinutes(p.Playtime2WeeksMinutes)</td>
+                <td class="whitespace-nowrap">@Fmt(p.CapturedAtUtc)</td>
+                <td class="font-mono text-xs opacity-60">@p.UserId / @p.SuggestionId</td>
+            </Row>
+        </DataTable>
+    }
+</div>
+
+@code {
+    /// <summary>How much of a review a cell prints before it is cut. The full text is on the game's page.</summary>
+    private const int PreviewLength = 240;
+
+    private PublicDataDto? Records { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // No [PersistentState]: the payload is every rating and playtime row in the database, and
+        // serialising that into the prerender state only to read it straight back is not free.
+        try
+        {
+            Records = await PublicDataApi.GetPublicDataAsync();
+        }
+        catch
+        {
+            Records = new PublicDataDto();
+        }
+    }
+
+    private static string Fmt(DateTime? utc) => utc.HasValue
+        ? utc.Value.ToString("dd MMM yyyy HH:mm 'UTC'", CultureInfo.InvariantCulture)
+        : "—";
+}

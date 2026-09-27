@@ -1,0 +1,113 @@
+@using FunMasters.Shared.DTOs
+@using System.Globalization
+@inject IRatingApiService RatingApi
+
+@* The quick way to amend a delivered verdict from the page it is printed on, without leaving it.
+   Self-contained: it owns the save, so a rejected edit can say why and stay open, and it only
+   reports success upward - the caller reloads the page and inherits whatever the server stored.
+   Rendered with daisyUI's modal-open rather than <dialog> so no JS interop is needed to open it. *@
+<div class="modal modal-open" role="dialog" aria-modal="true" aria-label="Edit your review">
+    <div class="modal-box max-w-2xl">
+        <h3 class="text-2xl text-primary mb-1 break-words">Edit your review</h3>
+        @if (!string.IsNullOrWhiteSpace(GameTitle))
+        {
+            <p class="opacity-70 mb-4 break-words">@GameTitle</p>
+        }
+
+        <ReviewForm Model="Model"
+                    FormName="@("edit-review-" + Rating.Id.ToString("n"))"
+                    SubmitLabel="Save changes"
+                    OnValidSubmit="Save"/>
+
+        @if (_error != null)
+        {
+            <div class="alert alert-error mt-3">
+                <span>@_error</span>
+            </div>
+        }
+
+        <div class="modal-action mt-4">
+            <button type="button" class="btn btn-ghost" disabled="@Model.IsSubmitting"
+                    @onclick="CloseAsync">
+                Cancel
+            </button>
+        </div>
+    </div>
+    <div class="modal-backdrop" @onclick="CloseAsync"></div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public RatingDto Rating { get; set; } = null!;
+    [Parameter] public string? GameTitle { get; set; }
+
+    /// <summary>Whether the active-window playtime figure is meaningful for this title.</summary>
+    [Parameter] public bool ShowPlaytime2Weeks { get; set; }
+
+    [Parameter] public EventCallback OnSaved { get; set; }
+    [Parameter] public EventCallback OnClosed { get; set; }
+
+    private ReviewFormModel Model { get; set; } = null!;
+    private Guid? _loadedFor;
+    private string? _error;
+
+    protected override void OnParametersSet()
+    {
+        // Rebuilt when the popup is pointed at a different verdict, and only then: this page
+        // re-renders for reasons of its own (a gem is awarded, playtimes tick in), and rebuilding
+        // on every one of those would wipe whatever the member was halfway through typing.
+        if (_loadedFor == Rating.Id)
+            return;
+
+        _loadedFor = Rating.Id;
+        _error = null;
+        Model = new ReviewFormModel
+        {
+            Score = Rating.DecimalScore,
+            Comment = Rating.Comment,
+            ShowPlaytime2Weeks = ShowPlaytime2Weeks,
+            PlaytimeHours = ToHours(Rating.PlaytimeForeverMinutes),
+            Playtime2WeeksHours = ToHours(Rating.Playtime2WeeksMinutes)
+        };
+    }
+
+    private static decimal? ToHours(int? minutes) =>
+        minutes.HasValue ? Math.Round(minutes.Value / 60m, 1) : null;
+
+    private async Task Save()
+    {
+        Model.IsSubmitting = true;
+        _error = null;
+
+        try
+        {
+            var result = await RatingApi.UpdateRatingAsync(Rating.Id, new UpdateRatingRequest
+            {
+                Score = (int)(Model.Score * 10),
+                Comment = Model.Comment,
+                ManualPlaytimeMinutes = ToMinutes(Model.PlaytimeHours),
+                ManualPlaytime2WeeksMinutes = ShowPlaytime2Weeks ? ToMinutes(Model.Playtime2WeeksHours) : null
+            });
+
+            if (result.Success)
+            {
+                await OnSaved.InvokeAsync();
+                return;
+            }
+
+            _error = result.ErrorMessage ?? "The Council could not record your changes. Please try again.";
+        }
+        catch (Exception)
+        {
+            _error = "The Council could not record your changes. Please try again.";
+        }
+        finally
+        {
+            Model.IsSubmitting = false;
+        }
+    }
+
+    private static int? ToMinutes(decimal? hours) =>
+        hours.HasValue ? (int)(hours.Value * 60) : null;
+
+    private Task CloseAsync() => Model.IsSubmitting ? Task.CompletedTask : OnClosed.InvokeAsync();
+}

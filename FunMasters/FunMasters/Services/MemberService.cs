@@ -17,7 +17,9 @@ public class MemberService(
     BadgeStorage badgeStorage) : IMemberApiService
 {
     /// <summary>
-    /// The public roll of the Council.
+    /// The public roll of the Council, behind which both the nav's member list and The Council page
+    /// sit. Aspirants and Shadows are left off it entirely; the cast out are kept but pushed behind
+    /// everyone currently seated.
     ///
     /// Four queries regardless of how many members there are: the criminal record is folded in
     /// memory rather than queried per member. Nothing here is denormalised — a stored offence
@@ -31,6 +33,7 @@ public class MemberService(
         var users = await db.Users
             .Include(u => u.UserBadges)
             .ThenInclude(ub => ub.Badge)
+            .Where(u => !CouncilStatusRoles.NotOnTheRoll.Contains(u.CouncilStatus))
             .ToListAsync();
 
         var finishedGames = await OffenceRules.JudgeableFinishedGames(db)
@@ -82,8 +85,9 @@ public class MemberService(
                     OffenceRules.OwesVerdict(u, g.Cutoff) && !delivered.Contains((u.Id, g.Id))),
                 WeakReviews = weakByUser.GetValueOrDefault(u.Id)
             })
-            // Seated members in rotation order; everyone else alphabetically behind them.
-            .OrderBy(m => m.CycleOrder > 0 ? 0 : 1)
+            // Seated members in rotation order, then the unseated, then the cast out at the back.
+            .OrderBy(m => CouncilStatusRoles.CastOut.Contains(m.CouncilStatus) ? 2
+                        : m.CycleOrder > 0 ? 0 : 1)
             .ThenBy(m => m.CycleOrder)
             .ThenBy(m => m.UserName)
             .ToList();

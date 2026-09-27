@@ -6,4 +6,5 @@ public class CreateRatingRequest
     public int Score { get; set; }
     public string? Comment { get; set; }
     public int? ManualPlaytimeMinutes { get; set; }
+    public int? ManualPlaytime2WeeksMinutes { get; set; }
 }

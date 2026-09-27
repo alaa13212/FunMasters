@@ -165,6 +165,17 @@
                                                         </button>
                                                     }
                                                 }
+                                                @if (rating.RaterId == _myId)
+                                                {
+                                                    <button type="button" class="btn btn-ghost btn-xs gap-1 px-1"
+                                                            aria-label="Edit your review"
+                                                            @onclick="() => _editingReview = rating">
+                                                        <svg viewBox="0 0 16 16" fill="currentColor" class="w-3.5 h-3.5">
+                                                            <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325"/>
+                                                        </svg>
+                                                        Edit
+                                                    </button>
+                                                }
                                             </div>
                                             @if (_gemError != null && _confirmingGemFor == rating.Id)
                                             {
@@ -230,6 +241,17 @@
                 </div>
             </div>
         </div>
+
+        @if (_editingReview != null)
+        {
+            @* The active window only means anything once the title has been before the Council. *@
+            <EditReviewModal Rating="_editingReview"
+                             GameTitle="@Game.Suggestion.Title"
+                             ShowPlaytime2Weeks="@(Game.Suggestion.Status is SuggestionStatus.Active
+                                                                   or SuggestionStatus.Finished)"
+                             OnSaved="ReviewSaved"
+                             OnClosed="@(() => _editingReview = null)"/>
+        }
     }
 </div>
 
@@ -253,6 +275,19 @@
     private Guid? _confirmingGemFor;
     private bool _awardingGem;
     private string? _gemError;
+
+    /// <summary>The verdict the quick-edit popup is currently open on, or null when it is closed.</summary>
+    private RatingDto? _editingReview;
+
+    /// <summary>
+    /// Re-reads the page rather than mirroring the saved form: the server decides what a hand-typed
+    /// playtime is worth, and the page re-syncs every playtime from Steam on load anyway.
+    /// </summary>
+    private void ReviewSaved()
+    {
+        _editingReview = null;
+        NavigationManager.Refresh(true);
+    }
 
     /// <summary>
     /// The review (or reviews, when tied) holding the most gems for this title. Decided here
@@ -332,7 +367,10 @@
 
                 _canRate = hasNoRatings && Game.Suggestion.Status is SuggestionStatus.Active or SuggestionStatus.Finished;
                 if (_canRate)
-                    _ratingRecord = new ReviewFormModel();
+                    _ratingRecord = new ReviewFormModel
+                    {
+                        ShowPlaytime2Weeks = ReviewFormModel.HasActiveWindow(Game.Suggestion.Status)
+                    };
                 
                 StateHasChanged();
 
@@ -381,6 +419,10 @@
                 Comment = _ratingRecord.Comment,
                 ManualPlaytimeMinutes = _ratingRecord.PlaytimeHours.HasValue
                     ? (int)(_ratingRecord.PlaytimeHours.Value * 60)
+                    : null,
+                ManualPlaytime2WeeksMinutes = _ratingRecord.ShowPlaytime2Weeks
+                                              && _ratingRecord.Playtime2WeeksHours.HasValue
+                    ? (int)(_ratingRecord.Playtime2WeeksHours.Value * 60)
                     : null
             };
 
