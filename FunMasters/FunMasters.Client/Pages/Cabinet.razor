@@ -1,0 +1,336 @@
+@page "/cabinet"
+@attribute [Authorize]
+@inject ILucianApiService LucianApi
+
+<PageTitle>Lucian Galade's Cabinet</PageTitle>
+
+<div class="max-w-5xl mx-auto p-4 md:p-6 space-y-8">
+
+    @* ── Dossier ── *@
+    <section class="card bg-base-200 shadow-xl">
+        <div class="card-body flex flex-col md:flex-row gap-6">
+            <img src="/images/lucian-galade.webp" alt="Portrait of Lucian Galade"
+                 class="w-44 md:w-56 rounded-box shadow-md self-center md:self-start border border-base-content/10"/>
+            <div class="space-y-3 flex-1">
+                <div>
+                    <p class="text-xs uppercase tracking-widest opacity-60">Dossier</p>
+                    <h1 class="text-3xl md:text-4xl font-bold text-primary">Lucian Galade</h1>
+                    <p class="text-lg opacity-80">Chief of Staff to the Council of Fun Masters</p>
+                </div>
+                <p>
+                    Lucian reads the Council its own minutes. Every announcement, reminder and verdict that
+                    reaches the Council's channel leaves his desk, delivered in the manner of a senior
+                    administrator in a velvet-lined chamber who slightly resents the entire room.
+                </p>
+                <p>
+                    He speaks for the Council, never as one of its members. He does not exclaim, does not
+                    apologise, and does not use slang. When the Council's patience runs out, he mentions
+                    Anton Rayne.
+                </p>
+                <div class="divider my-1"></div>
+                <h2 class="font-bold">How he addresses the Council</h2>
+                <ul class="space-y-2 text-sm">
+                    <li class="flex gap-2 items-baseline">
+                        <span class="badge badge-primary badge-sm shrink-0">Full message</span>
+                        <span>
+                            Opens with <i>"Esteemed members of the Council of Fun Masters,"</i> and closes with
+                            his signature, <i>Lucian Galade, Chief of Staff</i>.
+                        </span>
+                    </li>
+                    <li class="flex gap-2 items-baseline">
+                        <span class="badge badge-secondary badge-sm shrink-0">One-liner</span>
+                        <span>A single line, signed <i>L.G.</i></span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    @* ── Send an alert ── *@
+    <section class="card bg-base-200 shadow-xl">
+        <div class="card-body gap-4">
+            <div>
+                <h2 class="card-title text-2xl">Send an alert</h2>
+                <p class="text-sm opacity-70 mt-1">
+                    For rare things that need no trigger, such as trials. Lucian delivers it in his frame and
+                    names you as the one who asked.
+                </p>
+            </div>
+
+            <textarea class="textarea w-full h-32 leading-relaxed"
+                      placeholder="The trial for Hades opens on Friday at 9 PM."
+                      maxlength="4000"
+                      @bind="_alertText"
+                      @bind:event="oninput"></textarea>
+
+            <div class="flex flex-wrap items-center justify-between gap-2 text-sm">
+                @if (string.IsNullOrWhiteSpace(_alertText))
+                {
+                    <span class="opacity-60">
+                        A single line up to @LucianAlertRules.OneLinerMaxLength characters goes out as a one-liner;
+                        anything longer gets his full opener and signature.
+                    </span>
+                }
+                else if (LucianAlertRules.IsOneLiner(_alertText))
+                {
+                    <span><span class="badge badge-secondary badge-sm">One-liner</span> Goes out as a single line, signed L.G.</span>
+                }
+                else
+                {
+                    <span><span class="badge badge-primary badge-sm">Full message</span> Goes out with his opener and signature.</span>
+                }
+                <span class="opacity-60">@_alertText.Length characters</span>
+            </div>
+
+            <label class="label cursor-pointer justify-start gap-3 w-fit">
+                <input type="checkbox" class="checkbox checkbox-error" @bind="_critical"/>
+                <span>Critical: the alert opens with <b>[!] Urgent notice</b></span>
+            </label>
+
+            <div>
+                <InputFile OnChange="OnFileSelected" accept=".jpg,.jpeg,.png,.gif,.webp"
+                           class="file-input file-input-bordered w-full max-w-md"/>
+                <p class="text-xs opacity-60 mt-1">
+                    Optional image: JPEG, PNG, GIF or WebP, up to 5 MB. With an image, the whole alert must fit
+                    in 1024 characters.
+                </p>
+                @if (_selectedFile != null)
+                {
+                    <div class="mt-3 flex items-center gap-4 p-3 bg-base-300 rounded-box border border-base-content/10 max-w-md">
+                        @if (_imagePreviewUrl != null)
+                        {
+                            <img src="@_imagePreviewUrl" alt="preview"
+                                 class="w-16 h-16 object-cover rounded-field border border-base-content/10 shrink-0"/>
+                        }
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium truncate">@_selectedFile.Name</p>
+                            <p class="text-xs opacity-60">@FormatSize(_selectedFile.Size)</p>
+                        </div>
+                        <button type="button" class="btn btn-ghost btn-sm btn-circle" @onclick="ClearFile"
+                                aria-label="Remove image">✕</button>
+                    </div>
+                }
+            </div>
+
+            @if (!string.IsNullOrEmpty(_alertStatus))
+            {
+                <div role="alert" class="alert @(_alertSucceeded ? "alert-success" : "alert-error") shadow-sm">
+                    <span>@_alertStatus</span>
+                </div>
+            }
+
+            <div class="flex items-center gap-2 pt-3 border-t border-base-content/10">
+                @if (_awaitingConfirm)
+                {
+                    <span class="text-sm opacity-70 mr-auto">This posts to the Council's channel, in your name.</span>
+                    <button class="btn btn-ghost" @onclick="() => _awaitingConfirm = false" disabled="@_sending">Cancel</button>
+                    <button class="btn btn-error" @onclick="SendAlert" disabled="@_sending">
+                        @if (_sending)
+                        {
+                            <span class="loading loading-spinner loading-sm"></span>
+                        }
+                        Confirm and send
+                    </button>
+                }
+                else
+                {
+                    <button class="btn btn-primary ml-auto" disabled="@string.IsNullOrWhiteSpace(_alertText)"
+                            @onclick="() => { _alertStatus = null; _awaitingConfirm = true; }">
+                        Send through Lucian
+                    </button>
+                }
+            </div>
+        </div>
+    </section>
+
+    @* ── Triggers ── *@
+    <section class="space-y-6">
+        <div>
+            <h2 class="text-2xl font-bold">What makes Lucian speak</h2>
+            <p class="text-sm opacity-70 mt-1">
+                Every moment Lucian announces, with an example of what he says. A trigger that is switched off
+                stays silent until an admin switches it back on.
+            </p>
+        </div>
+
+        @if (_cabinet == null)
+        {
+            <div class="flex justify-center py-10"><span class="loading loading-spinner loading-lg"></span></div>
+        }
+        else
+        {
+            @foreach (var (form, heading, blurb) in Groups)
+            {
+                var triggers = _cabinet.Triggers.Where(t => t.Form == form).ToList();
+                <div class="space-y-3">
+                    <h3 class="text-xl font-bold flex items-center gap-2">
+                        @heading <span class="badge badge-ghost">@triggers.Count</span>
+                    </h3>
+                    <p class="text-sm opacity-70">@blurb</p>
+                    <div class="grid gap-4 md:grid-cols-2">
+                        @foreach (var trigger in triggers)
+                        {
+                            <div class="card bg-base-200 shadow @(trigger.Enabled ? "" : "opacity-60")">
+                                <div class="card-body p-5 gap-3">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <h4 class="font-bold text-lg leading-tight">@trigger.Name</h4>
+                                        <AuthorizeView Roles="Admin" Context="adminAuth">
+                                            <Authorized>
+                                                <label class="flex items-center gap-2 text-xs cursor-pointer shrink-0">
+                                                    @(trigger.Enabled ? "On" : "Off")
+                                                    <input type="checkbox" class="toggle toggle-primary toggle-sm"
+                                                           checked="@trigger.Enabled"
+                                                           disabled="@(_switchingKey == trigger.Key)"
+                                                           @onchange="e => SetEnabled(trigger, e.Value is true)"/>
+                                                </label>
+                                            </Authorized>
+                                            <NotAuthorized>
+                                                @if (!trigger.Enabled)
+                                                {
+                                                    <span class="badge badge-ghost badge-sm shrink-0">Switched off</span>
+                                                }
+                                            </NotAuthorized>
+                                        </AuthorizeView>
+                                    </div>
+                                    <p class="text-sm opacity-80">@trigger.WhenItFires</p>
+                                    @if (!string.IsNullOrEmpty(trigger.SampleHtml))
+                                    {
+                                        <details class="collapse collapse-arrow bg-base-100 border border-base-content/10">
+                                            <summary class="collapse-title text-sm font-medium min-h-0 py-2">Example</summary>
+                                            <div class="collapse-content">
+                                                <div class="whitespace-pre-wrap break-words text-sm leading-relaxed">@((MarkupString)trigger.SampleHtml)</div>
+                                            </div>
+                                        </details>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(_switchError))
+            {
+                <div role="alert" class="alert alert-error"><span>@_switchError</span></div>
+            }
+        }
+    </section>
+</div>
+
+@code {
+    private static readonly (LucianForm Form, string Heading, string Blurb)[] Groups =
+    [
+        (LucianForm.Full, "Full messages", "Lucian's full frame: the opener, the matter at hand, and his signature."),
+        (LucianForm.OneLiner, "One-liners", "Smaller news, in a single line signed L.G.")
+    ];
+
+    private const long MaxImageBytes = 5 * 1024 * 1024;
+
+    private LucianCabinetDto? _cabinet;
+    private string? _switchingKey;
+    private string? _switchError;
+
+    private string _alertText = "";
+    private bool _critical;
+    private IBrowserFile? _selectedFile;
+    private string? _imagePreviewUrl;
+    private bool _awaitingConfirm;
+    private bool _sending;
+    private string? _alertStatus;
+    private bool _alertSucceeded;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _cabinet = await LucianApi.GetCabinetAsync();
+    }
+
+    private async Task SetEnabled(LucianTriggerDto trigger, bool enabled)
+    {
+        _switchingKey = trigger.Key;
+        _switchError = null;
+        var result = await LucianApi.SetTriggerEnabledAsync(trigger.Key, enabled);
+        if (result.Success)
+            trigger.Enabled = enabled;
+        else
+            _switchError = result.ErrorMessage ?? "Could not switch the trigger.";
+        _switchingKey = null;
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        _alertStatus = null;
+        var file = e.File;
+        if (file.Size > MaxImageBytes)
+        {
+            _alertSucceeded = false;
+            _alertStatus = "The image must be 5 MB or smaller.";
+            return;
+        }
+
+        _selectedFile = file;
+
+        // A data URL preview, so no JS interop is needed.
+        try
+        {
+            await using var stream = file.OpenReadStream(MaxImageBytes);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            _imagePreviewUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(ms.ToArray())}";
+        }
+        catch
+        {
+            _imagePreviewUrl = null;
+        }
+    }
+
+    private void ClearFile()
+    {
+        _selectedFile = null;
+        _imagePreviewUrl = null;
+    }
+
+    private async Task SendAlert()
+    {
+        _sending = true;
+        _alertStatus = null;
+        try
+        {
+            Stream? stream = null;
+            if (_selectedFile != null)
+            {
+                var ms = new MemoryStream();
+                await _selectedFile.OpenReadStream(MaxImageBytes).CopyToAsync(ms);
+                ms.Position = 0;
+                stream = ms;
+            }
+
+            var result = await LucianApi.SendAlertAsync(
+                _alertText, _critical, stream, _selectedFile?.Name, _selectedFile?.ContentType);
+
+            _alertSucceeded = result.Success;
+            if (result.Success)
+            {
+                _alertStatus = "Lucian has delivered your alert.";
+                _alertText = "";
+                _critical = false;
+                ClearFile();
+            }
+            else
+            {
+                _alertStatus = result.ErrorMessage ?? "The alert could not be sent.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _alertSucceeded = false;
+            _alertStatus = ex.Message;
+        }
+        finally
+        {
+            _sending = false;
+            _awaitingConfirm = false;
+        }
+    }
+
+    private static string FormatSize(long bytes) =>
+        bytes < 1024 ? $"{bytes} B" : $"{bytes / 1024.0:F0} KB";
+}

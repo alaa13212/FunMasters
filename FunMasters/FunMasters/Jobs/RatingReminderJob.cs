@@ -86,7 +86,32 @@ public class RatingReminderJob : BackgroundService
             var raterIds = game.Ratings.Select(r => r.RaterId).ToHashSet();
             var unratedMembers = eligibleIds.Where(id => !raterIds.Contains(id)).ToList();
 
-            if (unratedMembers.Count > 0)
+            // Two days before the Writer of the title is named, one message chases both verdicts and
+            // gems, and takes the place of that day's rating reminder.
+            if (daysSinceFinish == LucianTriggers.GemReminderDays && await lucian.IsEnabledAsync(LucianTriggers.GemReminder))
+            {
+                var unratedNames = unratedMembers
+                    .Select(id => eligibleMembers.First(u => u.Id == id).UserName ?? "Unknown")
+                    .ToList();
+
+                var awardedBy = (await db.Gems
+                    .Where(g => g.SuggestionId == game.Id)
+                    .Select(g => g.AwardedById)
+                    .ToListAsync(stoppingToken)).ToHashSet();
+                var unspentNames = GemRules.UnspentGemHolders(game.Ratings, awardedBy)
+                    .Select(r => r.Rater?.UserName ?? "Unknown")
+                    .OrderBy(n => n)
+                    .ToList();
+
+                if (unratedNames.Count > 0 || unspentNames.Count > 0)
+                    await lucian.SendGemReminderAsync(
+                        game.Title, daysSinceFinish, LucianTriggers.TitleWriterDays - daysSinceFinish,
+                        unratedNames, unspentNames, isRepeat: daysSinceFinish > 3);
+
+                if (unratedMembers.Count > 0)
+                    continue;
+            }
+            else if (unratedMembers.Count > 0)
             {
                 var memberNames = new List<string>();
                 foreach (var memberId in unratedMembers)

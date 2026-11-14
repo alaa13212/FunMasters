@@ -26,6 +26,9 @@ public class FunMasterProfileDto
     public CriminalRecordDto CriminalRecord { get; set; } = new();
 
     public List<CycleAwardDto> WriterOfTheCycleWins { get; set; } = [];
+
+    /// <summary>What Lucian has to say about this member's record. Empty when it is in order.</summary>
+    public List<string> LucianRemarks { get; set; } = [];
 }
 
 public class CriminalRecordDto

@@ -1,0 +1,23 @@
+@* Lucian's remarks on a page. Renders nothing when he has nothing to point out. *@
+@if (Remarks is { Count: > 0 })
+{
+    <div role="note"
+         class="flex gap-3 items-start rounded-box border p-3 @(Stern ? "border-error/40 bg-error/10" : "border-base-content/10 bg-base-100")">
+        <img src="/images/lucian-galade.webp" alt="Lucian Galade"
+             class="@(Stern ? "w-14 h-16" : "w-10 h-12") object-cover object-top rounded-field shrink-0 border border-base-content/10"/>
+        <div class="space-y-1 @(Stern ? "text-sm" : "text-xs")">
+            <p class="text-xs uppercase tracking-widest opacity-60">Lucian Galade, Chief of Staff, remarks</p>
+            @foreach (var remark in Remarks)
+            {
+                <p class="italic">@remark</p>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public List<string>? Remarks { get; set; }
+
+    /// <summary>The member page is where the Council punishes; the game page stays quiet.</summary>
+    [Parameter] public bool Stern { get; set; }
+}

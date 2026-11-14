@@ -119,6 +119,7 @@ public class RatingService(
             await UpsertManualPlaytimeAsync(userId, request.SuggestionId,
                 request.ManualPlaytimeMinutes, request.ManualPlaytime2WeeksMinutes);
 
+        await AnnounceIfNewlyLongAsync(rating, suggestion, wasLong: false);
         await CheckAllRatingsInAsync(request.SuggestionId);
 
         return ApiResult<Guid>.Ok(rating.Id);
@@ -139,6 +140,9 @@ public class RatingService(
         if (request.Score < 1 || request.Score > 100)
             return ApiResult.Fail("Score must be between 1 and 100");
 
+        var wasLong = ReviewRules.IsLong(rating.Comment);
+        var oldScore = rating.Score;
+
         rating.Score = request.Score;
         rating.Comment = request.Comment;
 
@@ -148,8 +152,45 @@ public class RatingService(
             await UpsertManualPlaytimeAsync(userId, rating.SuggestionId,
                 request.ManualPlaytimeMinutes, request.ManualPlaytime2WeeksMinutes);
 
+        var suggestion = await db.Suggestions.FindAsync(rating.SuggestionId);
+        if (suggestion != null)
+        {
+            await AnnounceIfNewlyLongAsync(rating, suggestion, wasLong);
+
+            // A full point either way on a concluded title is news; nudging a score is not.
+            if (suggestion.Status == SuggestionStatus.Finished
+                && Math.Abs(rating.Score - oldScore) >= VerdictRevisedThreshold)
+            {
+                await lucianGalade.SendVerdictRevisedAsync(
+                    await GetUserNameAsync(userId), suggestion.Title, oldScore / 10m, rating.Score / 10m);
+            }
+        }
+
         return ApiResult.Ok();
     }
+
+    /// <summary>Score points (1 to 100) a revision must move by before Lucian mentions it: one full point.</summary>
+    private const int VerdictRevisedThreshold = 10;
+
+    /// <summary>
+    /// Lucian announces a review the moment it becomes long: on delivery, or on the edit that takes it
+    /// past the threshold. A review that was already long is left alone, which keeps reviews written
+    /// before he listened from being announced over a typo fix. Reviews of a title still in
+    /// deliberation wait: gems open only once it concludes, and QueueManager announces them then.
+    /// </summary>
+    private async Task AnnounceIfNewlyLongAsync(Rating rating, Suggestion suggestion, bool wasLong)
+    {
+        if (wasLong || !ReviewRules.IsLong(rating.Comment))
+            return;
+
+        if (suggestion.Status != SuggestionStatus.Finished)
+            return;
+
+        await lucianGalade.AnnounceLongReviewAsync(rating, await GetUserNameAsync(rating.RaterId), suggestion.Title);
+    }
+
+    private async Task<string> GetUserNameAsync(Guid userId) =>
+        await db.Users.Where(u => u.Id == userId).Select(u => u.UserName).FirstOrDefaultAsync() ?? "Unknown";
 
     private async Task CheckAllRatingsInAsync(Guid suggestionId)
     {

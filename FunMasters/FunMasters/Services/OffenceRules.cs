@@ -11,7 +11,7 @@ namespace FunMasters.Services;
 /// </summary>
 public static class OffenceRules
 {
-    public const int MinReviewWords = 3;
+    public const int MinReviewWords = ReviewRules.MinReviewWords;
 
     /// <summary>
     /// How much of a verdict is examined for substance. Comments run to 50,000 characters and the
@@ -26,8 +26,9 @@ public static class OffenceRules
     /// </summary>
     public static bool IsCommentSubstantial(string? comment)
     {
-        if (string.IsNullOrWhiteSpace(comment)) return false;
-        return comment.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length >= MinReviewWords;
+        // Counted by the shared rule, so the review form's live counter warns at exactly the point
+        // this record starts counting.
+        return ReviewRules.CountWords(comment) >= MinReviewWords;
     }
 
     /// <summary>

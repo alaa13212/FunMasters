@@ -39,6 +39,9 @@ public class QueueManager(
         }
         await db.SaveChangesAsync();
 
+        if (finished != null)
+            await AnnounceDeferredLongReviewsAsync(finished);
+
         await RebuildQueueAsync();
 
         await cycleService.StampMissingAsync();
@@ -60,7 +63,25 @@ public class QueueManager(
             outgoing.Title, playtimeData, incoming.Title,
             incoming.SuggestedBy?.UserName ?? "Unknown", incoming.SteamLink);
 
-        await lucianGalade.QueueForMorningAsync(message);
+        await lucianGalade.QueueForMorningAsync(LucianTriggers.GameRotation, message);
+    }
+
+    /// <summary>
+    /// Long reviews delivered while the title was still in deliberation were held back, since gems
+    /// only open once it concludes. They go out now, queued behind the rotation message so the
+    /// morning reads in order.
+    /// </summary>
+    private async Task AnnounceDeferredLongReviewsAsync(Suggestion finished)
+    {
+        var unannounced = await db.Ratings
+            .Include(r => r.Rater)
+            .Where(r => r.SuggestionId == finished.Id && r.LongReviewAnnouncedAtUtc == null)
+            .OrderBy(r => r.CreatedAtUtc)
+            .ToListAsync();
+
+        foreach (var rating in unannounced.Where(r => ReviewRules.IsLong(r.Comment)))
+            await lucianGalade.AnnounceLongReviewAsync(
+                rating, rating.Rater?.UserName ?? "Unknown", finished.Title, holdForMorning: true);
     }
     
     public async Task<Suggestion?> GetNextSuggestionAsync()

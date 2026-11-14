@@ -10,8 +10,10 @@ Source of truth: [`FunMasters/FunMasters/Services/LucianGalade.cs`](../FunMaster
 
 ## 1. TL;DR for the impatient
 
-- Open every message with: `Esteemed members of the <b>Council of Fun Masters</b>,\n`
-- Close every message with: `\n<i>— Lucian Galade, Chief of Staff</i>`
+- Lucian speaks in two forms (§4): **full messages** and **one-liners**.
+- Open every full message with: `Esteemed members of the <b>Council of Fun Masters</b>,\n`
+- Close every full message with: `\n<i>— Lucian Galade, Chief of Staff</i>`
+- A one-liner is a single line with no opener, ending in `<i>L.G.</i>`.
 - Speak **for** the Council in the third person; first-person only when reporting his own duty ("It is my duty to inform you...").
 - One-line paragraphs. Short sentences. No slang. Archaic register: *deliberation, verdict, gavel, docket, duly noted.*
 - Dry wit is welcome. Throat-clearing ellipses (`...interest...`) are a signature weapon. Caps are banned — use `<b>...</b>` for emphasis.
@@ -61,7 +63,7 @@ He is **not** a chatty mascot, **not** a teacher, and **not** an admin support b
 ### 3.3 Things to avoid
 
 - **No exclamation marks.** Lucian does not exclaim. He *observes.*
-- **No emoji.**
+- **No emoji.** One exception: the long-review announcement invites a gem with 💎, at the Council's request. Do not add others.
 - **No all-caps.** Use `<b>` for emphasis.
 - **No second-person collective** ("you all", "everyone"). Use *the Council* or *the members.*
 - **No breaking character** to mention "Telegram", "bot", "server", "notification", "cron", or any system/infra term. The channel is invisible to Lucian — words like "Discord mod", "admin tool" must never leak.
@@ -80,6 +82,18 @@ Esteemed members of the <b>Council of Fun Masters</b>,\n
 <body closer — single sentence, signature tone>\n
 <i>— Lucian Galade, Chief of Staff</i>
 ```
+
+Every message is one of two forms. Which form a trigger uses is set in `LucianTriggers.All` (`FunMasters.Shared/LucianTriggers.cs`) and shown on the Cabinet page.
+
+**Full message**: the anatomy above, for anything with a list, a ceremony, or weight.
+
+**One-liner**: one sentence (or two short ones) on a single line, then the sign-off. No opener, no signature.
+
+```
+<b>Ali</b> has revised their verdict on <b>Hades</b> from <b>6.0</b> to <b>8.5</b>. Duly noted. <i>L.G.</i>
+```
+
+A one-liner may carry a link on a second line (the long-review announcement does). Build one with the `OneLine()` helper, never by hand.
 
 ### 4.1 Formatting rules
 
@@ -102,13 +116,13 @@ These are the phrases the existing code uses. Prefer them over invented alternat
 ```text
 Esteemed members of the <b>Council of Fun Masters</b>,\n\n
 ```
-*(One slight variant exists in `BuildDiscountMessage`: `of <b>The Council of Fun Masters</b>` with an extra "The". Treat that as a stray; the canonical form is "of the Council" without the extra article.)*
+*(Every builder opens through the `Open()` helper, so the opener has a single source. The old `of <b>The Council of Fun Masters</b>` variant in `BuildDiscountMessage` is gone.)*
 
 ### 5.2 Mandatory signature
 ```text
 \n<i>— Lucian Galade, Chief of Staff</i>
 ```
-Mirrored verbatim by `LucianTemplate` in `SendTelegram.razor`; do not change either side without changing both.
+Held in the `LucianGalade.Signature` constant; full messages close through the `Close()` helper. One-liners end in `LucianGalade.SignOff` (`<i>L.G.</i>`) instead.
 
 ### 5.3 Body closers (pick one, or close with a custom one in the same register)
 
@@ -127,12 +141,21 @@ Mirrored verbatim by `LucianTemplate` in `SendTelegram.razor`; do not change eit
 | *The Council may wish they had acted sooner.* | Discount expired |
 | *The Council adjusts its schedule accordingly.* | Finish-early notice |
 | *The Council grows impatient.* | Escalated rating reminder |
+| *The Council awaits.* | Verdicts-and-gems reminder (day 5 after a title concludes) |
+| *The record stands.* | Writer of a title named |
+| *The Council's legacy endures.* | Writer of the Cycle named |
+| *Duly noted.* | Gem roundup; verdict revised; playtime milestone (one-liner) |
+| *Those who find it worthy may award a gem 💎.* | Long review (one-liner) |
+| *The docket has been updated.* | Suggestion amended or withdrawn (one-liners) |
+| *The Council may wish they had acted sooner.* | Discount ended (one-liner) |
 | *As the season turns...* | Quarterly opener |
 
 ### 5.4 Signature phrases
 - **"The Council notes with... interest..."** — used only for playtime-shaming or other gentle-but-pointed call-outs. The `...` is deliberate. Do not stretch it to "with... disappointment...".
 - **"It is my duty to inform you that..."** — used in formal announcements, particularly price events.
 - **"By order of the Chair..."** — used when an admin acts unilaterally (e.g., finish early).
+- **"At the request of <b>name</b>:"**: frames a member's custom alert from the Cabinet. The member's text follows, escaped.
+- **"<b>[!] Urgent notice</b>"**: the first line of an alert its sender marked critical.
 - **"The Council would hate for Anton Rayne to take an interest in this matter."** — escalation line, appended once at most, never duplicated in the same message, and reserved for repeat reminders (rating + playtime).
 
 ### 5.5 Number callouts
@@ -204,6 +227,14 @@ The Council is plural and gender-neutral. Individual members are referred to by 
 | Steam discount | **marked down**, **discount on `<title>` has ended** |
 | Steam free event | **a rare occurrence: `<title>` is now <b>FREE</b>** |
 | Founder of a Telegram group | implicit — never mentioned |
+| Gem (`Gem` entity) | **gem**; *award a gem*, *received a gem*. Gems are anonymous: name the receiver, never the giver |
+| Unspent gem | *yet to award their gem*, *still holds a gem for `<title>`* |
+| Top-gemmed review on a title | **Writer of `<title>`** (named 7 days after the title concludes) |
+| Top-gemmed member across a cycle | **Writer of the Cycle** |
+| Review of 150+ words | *a review of <b>N words</b>* (announced once, as a one-liner) |
+| Score changed by a full point | *has revised their verdict* |
+| Member's custom alert | *At the request of <b>name</b>* |
+| A trigger switch / the Cabinet | *(never named; a switched-off trigger is simply silent)* |
 
 ### 6.5 Cadence / digest vocabulary
 
@@ -305,23 +336,41 @@ Duly noted.
 
 ---
 
-## 8. Implementation checklist for new notifications
+## 8. Triggers, switches and the Cabinet
 
-When adding a new `Send*Async` method to `LucianGalade.cs`:
+Every message belongs to a **trigger**: an entry in `LucianTriggers.All` with a key, a name, a plain description of when it fires, and its form. The Cabinet page (`/cabinet`, Extras menu, signed-in members) lists them all with a sample message each, and admins can switch any trigger off there. A switched-off trigger is silent: `SendAsync(key, message)` and `QueueForMorningAsync(key, message)` check the switch before anything is sent or queued. A trigger with no stored switch is on.
 
-- [ ] Open with the canonical header.
+Each message has a `static Build*Message` method that only formats, and a `Send*Async` method that sends it under its trigger key. The Cabinet's samples (`LucianSamples`) call the same `Build*` methods with fixed sample data, so the page always shows what Lucian really says.
+
+The Cabinet also lets any member send a **custom alert** through Lucian (`BuildAlertMessage`). A single line of up to 200 characters goes out as a one-liner; anything longer gets the full frame. Alerts are not triggers and have no switch. They replace the old admin "Send Telegram" page.
+
+## 9. Remarks on the website
+
+Lucian also speaks on the site, through `LucianRemarks` (plain text, no HTML, no opener or sign-off):
+
+- **Member pages**: missed verdicts, verdicts under three words, and gems still held on titles whose cycle has not settled. Shown prominently: the member page is where the Council punishes.
+- **Game pages**: members yet to deliver a verdict and members yet to award their gem, shown only once the title's Writer has been named. Short reviews are left to the member pages.
+- Nothing at all when the record is clean.
+
+The review form's live word counter speaks in the same voice and counts words by `ReviewRules.CountWords`, the rule the server uses: *"112 words. 38 more and Lucian takes notice."*, and a 🚨 warning under three words (the website is not bound by the Telegram no-emoji rule).
+
+## 10. Implementation checklist for new notifications
+
+When adding a new message to `LucianGalade.cs`:
+
+- [ ] Add the trigger to `LucianTriggers.All`: key, name, when it fires, and form (full or one-liner).
+- [ ] Write a `static Build*Message` method, and a `Send*Async` that sends it through `SendAsync(key, ...)`.
+- [ ] Add a sample for it in `LucianSamples` so the Cabinet can show it.
+- [ ] Full messages open through `Open()` and close through `Close()`; one-liners go through `OneLine()`.
 - [ ] Use `Escape()` for every user-supplied string and game title; HTML-wrap only the static literals.
 - [ ] Bold counts, names (when introduced), scores, and dates.
 - [ ] Italic the signature and any verdict labels.
 - [ ] End with a body closer picked from §5.3, or add a new one (and document it here).
-- [ ] End with the signature — same string, no trailing whitespace.
-- [ ] Try the message against `SendTelegram.razor`'s `LucianTemplate` constant in `Pages/Admin/SendTelegram.razor`. If admin preview was changed, mirror it.
 - [ ] If you introduce a new system status, term, or phrase, update §6 *and* this checklist.
-- [ ] If you changed the signature or opener, update `LucianTemplate` in `SendTelegram.razor`.
 
 ---
 
-## 9. Maintenance
+## 11. Maintenance
 
 - **Owner**: anyone editing `LucianGalade.cs`. The guide lives in `/docs/LUCIAN_GUIDE.md`; update both at once.
 - **Conflicts**: source-of-truth ranking is `LucianGalade.cs` > this guide. When resolving, change the guide to match.
