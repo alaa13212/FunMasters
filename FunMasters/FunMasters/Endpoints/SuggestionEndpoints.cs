@@ -60,6 +60,13 @@ public static class SuggestionEndpoints
             return Results.Ok(result);
         }).RequireAuthorization();
 
+        // GET /api/suggestions/my/next-queued
+        group.MapGet("/my/next-queued", async (ISuggestionApiService service) =>
+        {
+            var result = await service.GetMyNextQueuedAsync();
+            return result != null ? Results.Ok(result) : Results.NoContent();
+        }).RequireAuthorization();
+
         // POST /api/suggestions
         group.MapPost("/", async (
             [FromBody] CreateSuggestionRequest request,
@@ -92,12 +99,12 @@ public static class SuggestionEndpoints
                 : Results.Json(result, statusCode: result.ErrorMessage?.Contains("not found") == true ? 404 : 403);
         }).RequireAuthorization();
 
-        // POST /api/suggestions/reorder
-        group.MapPost("/reorder", async (
-            [FromBody] ReorderSuggestionRequest request,
+        // POST /api/suggestions/my/arrange
+        group.MapPost("/my/arrange", async (
+            [FromBody] ArrangeSuggestionsRequest request,
             ISuggestionApiService service) =>
         {
-            var result = await service.ReorderSuggestionAsync(request);
+            var result = await service.ArrangeMySuggestionsAsync(request);
             return Results.Json(result);
         }).RequireAuthorization();
 

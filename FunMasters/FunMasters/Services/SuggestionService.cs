@@ -308,61 +308,74 @@ public class SuggestionService(
         return ApiResult.Ok();
     }
 
-    public async Task<ApiResult> ReorderSuggestionAsync(ReorderSuggestionRequest request)
+    public async Task<ApiResult> ArrangeMySuggestionsAsync(ArrangeSuggestionsRequest request)
     {
         var userId = GetCurrentUserId();
-        var suggestion = await db.Suggestions.FindAsync(request.SuggestionId);
-        if (suggestion == null)
-            return ApiResult.Fail("Suggestion not found");
+        var pending = await db.Suggestions
+            .Where(s => s.SuggestedById == userId && s.Status == SuggestionStatus.Pending)
+            .ToListAsync();
 
-        // Only owner can reorder their own suggestion
-        if (suggestion.SuggestedById != userId)
-            return ApiResult.Fail("You can only reorder your own suggestions");
+        // The client must send back exactly the pending set it was shown. Anything else means the
+        // page is stale (a game got queued, added or deleted elsewhere), so refuse rather than guess.
+        var arranged = request.VisibleIds.Concat(request.HiddenIds).ToList();
+        var pendingById = pending.ToDictionary(s => s.Id);
+        if (arranged.Count != pending.Count
+            || arranged.Distinct().Count() != arranged.Count
+            || !arranged.All(pendingById.ContainsKey))
+            return ApiResult.Fail("Your games changed since the page loaded. Reload and try again.");
 
-        // Only pending suggestions can be reordered
-        if (suggestion.Status != SuggestionStatus.Pending)
-            return ApiResult.Fail("Can only reorder pending suggestions");
-
-        List<Suggestion> sortGames;
-        if (request.Direction.Equals("up", StringComparison.OrdinalIgnoreCase))
+        // Hand the pending games the order slots they already hold between them, so queued and
+        // finished games keep theirs and the queue only ever sees pending games trade places.
+        var slots = pending.Select(s => s.Order).Order().ToList();
+        var hiddenIds = request.HiddenIds.ToHashSet();
+        for (int i = 0; i < arranged.Count; i++)
         {
-            sortGames = await db.Suggestions
-                .OrderByDescending(g => g.Order)
-                .Where(s => s.SuggestedById == userId && s.Order <= suggestion.Order && s.Status == SuggestionStatus.Pending)
-                .Take(2)
-                .ToListAsync();
-
-            if (sortGames.Count < 2)
-                return ApiResult.Fail("Cannot move up");
-
-            var thisGame = sortGames[0];
-            var otherGame = sortGames[1];
-            otherGame.Order++;
-            thisGame.Order--;
-        }
-        else if (request.Direction.Equals("down", StringComparison.OrdinalIgnoreCase))
-        {
-            sortGames = await db.Suggestions
-                .OrderBy(g => g.Order)
-                .Where(s => s.SuggestedById == userId && s.Order >= suggestion.Order && s.Status == SuggestionStatus.Pending)
-                .Take(2)
-                .ToListAsync();
-
-            if (sortGames.Count < 2)
-                return ApiResult.Fail("Cannot move down");
-
-            var thisGame = sortGames[0];
-            var otherGame = sortGames[1];
-            otherGame.Order--;
-            thisGame.Order++;
-        }
-        else
-        {
-            return ApiResult.Fail("Invalid direction");
+            var suggestion = pendingById[arranged[i]];
+            suggestion.Order = slots[i];
+            suggestion.IsHidden = hiddenIds.Contains(suggestion.Id);
         }
 
         await db.SaveChangesAsync();
+        await queueManager.UpdateQueueAsync();
         return ApiResult.Ok();
+    }
+
+    /// <summary>
+    /// The caller's game that is next to be queued anywhere in the Council, if that happens within
+    /// a day. <see cref="QueueManager.RebuildQueueAsync"/> queues a member's top pending game as
+    /// soon as they have nothing queued or playing, which in a running rotation only happens when
+    /// their active game ends - so the next game queued is always the active suggester's, at the
+    /// active game's finish. Answers only that suggester, so nobody learns another member's pick.
+    /// </summary>
+    public async Task<NextQueuedDto?> GetMyNextQueuedAsync()
+    {
+        var userId = GetCurrentUserId();
+        var active = await db.Suggestions
+            .Include(s => s.SuggestedBy)
+            .FirstOrDefaultAsync(s => s.Status == SuggestionStatus.Active);
+
+        if (active?.FinishedAtUtc == null || active.SuggestedById != userId)
+            return null;
+
+        var timeLeft = active.FinishedAtUtc.Value - FunMastersTime.UtcNow;
+        if (timeLeft <= TimeSpan.Zero || timeLeft > TimeSpan.FromHours(24))
+            return null;
+
+        // Members outside the rotation never get a game queued.
+        var user = active.SuggestedBy!;
+        if (user.CycleOrder <= 0 || !CouncilStatusRoles.InQueue.Contains(user.CouncilStatus))
+            return null;
+
+        var mine = await db.Suggestions
+            .Where(s => s.SuggestedById == userId
+                        && (s.Status == SuggestionStatus.Pending || s.Status == SuggestionStatus.Queued))
+            .OrderBy(s => s.Order)
+            .FirstOrDefaultAsync();
+
+        // Hidden games are queued like any other, so the top one by order counts whether hidden or not.
+        return mine is { Status: SuggestionStatus.Pending }
+            ? new NextQueuedDto { SuggestionId = mine.Id, QueuedAtUtc = active.FinishedAtUtc.Value }
+            : null;
     }
 
     private SuggestionDto MapToDto(Suggestion suggestion)
