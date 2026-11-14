@@ -3,6 +3,12 @@ namespace FunMasters.Shared.DTOs;
 public class LucianCabinetDto
 {
     public List<LucianTriggerDto> Triggers { get; set; } = [];
+
+    /// <summary>
+    /// Whether the viewer may send alerts through Lucian. Members the Council has cast out
+    /// (excommunicated or executed) may read the Cabinet but not speak through it.
+    /// </summary>
+    public bool CanSendAlert { get; set; }
 }
 
 public class LucianTriggerDto

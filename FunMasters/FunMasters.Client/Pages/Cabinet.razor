@@ -46,7 +46,18 @@
         </div>
     </section>
 
-    @* ── Send an alert ── *@
+    @* ── Send an alert ── cast-out members get Lucian's refusal instead of the form. *@
+    @if (_cabinet is { CanSendAlert: false })
+    {
+        <section class="card bg-base-200 shadow-xl">
+            <div class="card-body gap-2">
+                <h2 class="card-title text-2xl">Send an alert</h2>
+                <p class="italic opacity-80">The Council no longer hears from those it has cast out.</p>
+            </div>
+        </section>
+    }
+    else if (_cabinet != null)
+    {
     <section class="card bg-base-200 shadow-xl">
         <div class="card-body gap-4">
             <div>
@@ -142,6 +153,7 @@
             </div>
         </div>
     </section>
+    }
 
     @* ── Triggers ── *@
     <section class="space-y-6">

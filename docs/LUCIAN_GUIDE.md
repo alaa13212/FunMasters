@@ -342,7 +342,7 @@ Every message belongs to a **trigger**: an entry in `LucianTriggers.All` with a 
 
 Each message has a `static Build*Message` method that only formats, and a `Send*Async` method that sends it under its trigger key. The Cabinet's samples (`LucianSamples`) call the same `Build*` methods with fixed sample data, so the page always shows what Lucian really says.
 
-The Cabinet also lets any member send a **custom alert** through Lucian (`BuildAlertMessage`). A single line of up to 200 characters goes out as a one-liner; anything longer gets the full frame. Alerts are not triggers and have no switch. They replace the old admin "Send Telegram" page.
+The Cabinet also lets any member send a **custom alert** through Lucian (`BuildAlertMessage`), except those the Council has cast out (`CouncilStatusRoles.CastOut`: excommunicated and executed members), who are refused. A single line of up to 200 characters goes out as a one-liner; anything longer gets the full frame. Alerts are not triggers and have no switch. They replace the old admin "Send Telegram" page.
 
 ## 9. Remarks on the website
 

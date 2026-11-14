@@ -31,9 +31,11 @@ public class LucianCabinetService(
             .ToDictionaryAsync(s => s.Key, s => s.Enabled);
 
         var samples = LucianSamples.Build(lucian.TitleLink(Guid.Parse("5a3c1e0b-7d42-4f9a-9b1e-2c6d8e4f0a17")));
+        var viewer = await GetCurrentUserAsync();
 
         return new LucianCabinetDto
         {
+            CanSendAlert = viewer != null && MaySendAlerts(viewer.Value.Status),
             Triggers = LucianTriggers.All.Select(t => new LucianTriggerDto
             {
                 Key = t.Key,
@@ -73,9 +75,14 @@ public class LucianCabinetService(
         if (string.IsNullOrWhiteSpace(text))
             return ApiResult.Fail("Write the alert first");
 
-        var sender = await GetCurrentUserNameAsync();
-        if (sender == null)
+        var viewer = await GetCurrentUserAsync();
+        if (viewer == null)
             return ApiResult.Fail("You must be signed in to send an alert");
+
+        if (!MaySendAlerts(viewer.Value.Status))
+            return ApiResult.Fail("The Council no longer hears from those it has cast out.");
+
+        var sender = viewer.Value.UserName;
 
         if (imageStream != null)
         {
@@ -107,15 +114,20 @@ public class LucianCabinetService(
         }
     }
 
-    private async Task<string?> GetCurrentUserNameAsync()
+    /// <summary>Excommunicated and executed members may not speak through Lucian.</summary>
+    private static bool MaySendAlerts(CouncilStatus status) => !CouncilStatusRoles.CastOut.Contains(status);
+
+    private async Task<(string UserName, CouncilStatus Status)?> GetCurrentUserAsync()
     {
         var idClaim = httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (idClaim == null || !Guid.TryParse(idClaim, out var userId))
             return null;
 
-        return await db.Users
+        var user = await db.Users
             .Where(u => u.Id == userId)
-            .Select(u => u.UserName)
+            .Select(u => new { u.UserName, u.CouncilStatus })
             .FirstOrDefaultAsync();
+
+        return user == null ? null : (user.UserName ?? "Unknown", user.CouncilStatus);
     }
 }
