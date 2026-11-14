@@ -12,81 +12,143 @@
     }
     else
     {
-        <h3 class="text-2xl text-center mb-4">My Game Suggestions</h3>
+        <div class="flex items-center justify-between gap-3 mb-4">
+            <h3 class="text-2xl">My Game Suggestions</h3>
+            <a class="btn btn-primary" href="/my-games/add">Add Game</a>
+        </div>
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <div class="alert alert-warning mb-4">@_error</div>
+        }
 
         @if (UserSuggestions == null || !UserSuggestions.Any())
         {
             <p><em>No suggestions yet.</em></p>
-            <div class="card-actions justify-center">
-                <a class="btn btn-primary mb-3" href="/my-games/add">Add Game</a>
-            </div>
         }
         else
         {
-            <div class="card bg-base-200 shadow-md">
-                <div class="card-body">
-                    <div class="overflow-x-auto rounded-box border border-base-content/5 bg-base-100">
-                        <table class="table table-zebra">
-                            <thead>
-                            <tr>
-                                <th>Order</th>
-                                <th>Title</th>
-                                <th>Is Hidden</th>
-                                <th>Added</th>
-                                <th>Play Date</th>
-                                <th>Finished Date</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            @foreach (var s in UserSuggestions)
-                            {
-                                <tr class="hover:bg-base-300">
-                                    <td>@s.Order</td>
-                                    <td>@s.Title</td>
-                                    <td>@s.IsHidden</td>
-                                    <td>@s.CreatedAtUtc.ToLocalTime().ToString("yyyy-M-d")</td>
-                                    <td>@s.ActiveAtUtc?.ToLocalTime().ToString("yyyy-M-d")</td>
-                                    <td>@s.FinishedAtUtc?.ToLocalTime().ToString("yyyy-M-d")</td>
-                                    <td>@s.Status</td>
-                                    <td>
-                                        @if (s.Status == SuggestionStatus.Pending)
-                                        {
-                                            <a href="/my-games/edit/@s.Id" class="text-primary">Edit</a>
-                                            @:|
-                                            <a href="/my-games/delete/@s.Id" class="text-primary"> Delete </a>
-                                            if (s != UserSuggestions.First(g => g.Status == SuggestionStatus.Pending))
-                                            {
-                                                @:|
-                                                <a class="cursor-pointer text-primary" @onclick="async () => await SortUp(s)">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-up inline" viewBox="0 0 16 16">
-                                                        <path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708z"/>
-                                                    </svg>
-                                                </a>
-                                            }
-                                            if (s != UserSuggestions.Last())
-                                            {
-                                                @:|
-                                                <a class="cursor-pointer text-primary" @onclick="async () => await SortDown(s)">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down inline" viewBox="0 0 16 16">
-                                                        <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"/>
-                                                    </svg>
-                                                </a>
-                                            }
-                                        }
-                                    </td>
-                                </tr>
-                            }
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="card-actions justify-end">
-                        <a class="btn btn-primary mb-3" href="/my-games/add">Add Game</a>
-                    </div>
+            <div class="divider md:text-2xl md:m-8">Finished, Active & Queued</div>
+            @if (_locked.Any())
+            {
+                <div class="grid grid-cols-1 md:grid-cols-fill-[400px] gap-3 md:gap-5">
+                    @foreach (var game in _locked)
+                    {
+                        <div class="card card-side bg-base-200 grid grid-cols-2 shadow-xs overflow-hidden card-hover">
+                            <figure>
+                                <img src="@game.CoverImageUrl" alt="@game.Title"/>
+                            </figure>
+                            <div class="card-body p-4 gap-2">
+                                <h3 class="text-xl text-primary leading-tight">@game.Title</h3>
+                                <span class="@StatusBadgeClass(game.Status)">@StatusLabel(game.Status)</span>
+                                <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-sm">
+                                    <dt class="opacity-60">Added</dt>
+                                    <dd>@FormatDate(game.CreatedAtUtc)</dd>
+                                    <dt class="opacity-60">Play date</dt>
+                                    <dd>@FormatDate(game.ActiveAtUtc)</dd>
+                                    <dt class="opacity-60">Finish date</dt>
+                                    <dd>@FormatDate(game.FinishedAtUtc)</dd>
+                                    @if (game.AverageRating.HasValue)
+                                    {
+                                        <dt class="opacity-60">Rating</dt>
+                                        <dd class="text-primary">@game.AverageRating.Value.ToString("0.#")<small>/10</small></dd>
+                                    }
+                                </dl>
+                            </div>
+                            <a href="game/@game.Id" class="absolute inset-0"></a>
+                        </div>
+                    }
                 </div>
-            </div>
+            }
+            else
+            {
+                <p><em>None of your games have been played yet.</em></p>
+            }
 
+            <div class="divider md:text-2xl md:m-8">Pending</div>
+            <p class="text-sm opacity-60 mb-3 flex items-center gap-2">
+                Drag to change the order. Drag a game between Pending and Hidden to hide or show it.
+                @if (_saving)
+                {
+                    <span class="loading loading-spinner loading-xs"></span>
+                }
+            </p>
+
+            @* Both pending lists are one flat loop under one parent so @key can move a card, even
+               across lists, without recreating it - a dragged element that gets replaced mid-drag
+               never fires dragend. Rendering cards through a RenderFragment helper breaks this:
+               each call becomes its own region and the keys stop being siblings.
+               Firefox will not start a drag unless something is put in dataTransfer, which Blazor
+               cannot do from C#, hence the inline handler. *@
+            <div class="grid grid-cols-1 md:grid-cols-fill-[400px] gap-3 md:gap-5"
+                 ondragstart="event.dataTransfer.setData('text/plain', ''); event.dataTransfer.effectAllowed = 'move';"
+                 @ondragover:preventDefault
+                 @ondrop="() => _dropped = true" @ondrop:preventDefault>
+
+                @foreach (var slot in PendingSlots())
+                {
+                    var list = slot.InHiddenList ? _hidden : _visible;
+                    if (slot.Kind == SlotKind.Card)
+                    {
+                        var game = slot.Game!;
+                        <div @key="game.Id"
+                             class="card card-side bg-base-200 grid grid-cols-2 shadow-xs overflow-hidden card-hover cursor-grab active:cursor-grabbing @(game == _dragged ? "opacity-40" : "") @(game.Id == NextQueued?.SuggestionId ? "ring-2 ring-warning" : "")"
+                             draggable="@(_saving ? "false" : "true")"
+                             @ondragstart="() => StartDrag(game)"
+                             @ondragend="EndDrag"
+                             @ondragover="() => DragOverCard(game)" @ondragover:preventDefault @ondragover:stopPropagation>
+                            <figure class="@(slot.InHiddenList ? "opacity-50" : "")">
+                                <img src="@game.CoverImageUrl" alt="@game.Title" draggable="false"/>
+                            </figure>
+                            <div class="card-body p-4 gap-2">
+                                @if (!slot.InHiddenList)
+                                {
+                                    <span class="absolute text-[200px] -bottom-20 -end-5 opacity-10 select-none pointer-events-none">@slot.Position</span>
+                                }
+                                <h3 class="text-xl text-primary leading-tight">@game.Title</h3>
+                                <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-sm">
+                                    <dt class="opacity-60">Added</dt>
+                                    <dd>@FormatDate(game.CreatedAtUtc)</dd>
+                                    <dt class="opacity-60">Status</dt>
+                                    <dd>@(slot.InHiddenList ? "Hidden" : "Pending")</dd>
+                                </dl>
+                                @if (game.Id == NextQueued?.SuggestionId)
+                                {
+                                    <div role="alert" class="alert alert-warning alert-soft text-xs px-2 py-1 relative z-10">
+                                        Gets queued in @QueuedInText(NextQueued.QueuedAtUtc). Move another game to the top if you'd rather play something else next.
+                                    </div>
+                                }
+                                <div class="card-actions mt-auto relative z-10">
+                                    <a href="/my-games/edit/@game.Id" class="btn btn-xs" draggable="false">Edit</a>
+                                    <button type="button" class="btn btn-xs" disabled="@_saving"
+                                            @onclick="() => ToggleHidden(game)">@(slot.InHiddenList ? "Unhide" : "Hide")</button>
+                                    <a href="/my-games/delete/@game.Id" class="btn btn-xs btn-error btn-outline" draggable="false">Delete</a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else if (slot.Kind == SlotKind.Tail)
+                    {
+                        @* After a list's last card: a drop zone while dragging, otherwise the empty message. *@
+                        <div @key="@(slot.InHiddenList ? "tail-hidden" : "tail-visible")"
+                             class="@(_dragged != null ? "rounded-box border-2 border-dashed border-base-content/20 min-h-24 flex items-center justify-center text-sm opacity-60" : list.Any() ? "hidden" : "col-span-full")"
+                             @ondragover="() => DragOverTail(list)" @ondragover:preventDefault @ondragover:stopPropagation>
+                            @if (_dragged != null)
+                            {
+                                <span>Drop here</span>
+                            }
+                            else if (!list.Any())
+                            {
+                                <p><em>@(slot.InHiddenList ? "Drag a game here to hide it." : "No pending games. Drag a hidden one here, or add a new one.")</em></p>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div @key="@("divider-hidden")" class="divider col-span-full md:text-2xl md:m-8">Hidden</div>
+                    }
+                }
+            </div>
         }
     }
 
@@ -94,22 +156,34 @@
 
 @code {
     [PersistentState] public List<SuggestionDto>? UserSuggestions { get; set; }
-    
+
+    /// Set only when one of this user's pending games is the next to be queued in the whole
+    /// Council and that happens within a day.
+    [PersistentState] public NextQueuedDto? NextQueued { get; set; }
+
     private bool _loading = true;
+    private bool _saving;
+    private string? _error;
+
+    private List<SuggestionDto> _locked = [];
+    private List<SuggestionDto> _visible = [];
+    private List<SuggestionDto> _hidden = [];
+
+    private SuggestionDto? _dragged;
+    private bool _dropped;
+    private List<SuggestionDto> _visibleBeforeDrag = [];
+    private List<SuggestionDto> _hiddenBeforeDrag = [];
 
     protected override async Task OnInitializedAsync()
     {
-        if(UserSuggestions == null)
-            await LoadGames();
-    }
-
-    private async Task LoadGames()
-    {
-        _loading = true;
-
         try
         {
-            UserSuggestions = await SuggestionApi.GetMySuggestionsAsync();
+            if (UserSuggestions == null)
+            {
+                UserSuggestions = await SuggestionApi.GetMySuggestionsAsync();
+                NextQueued = await SuggestionApi.GetMyNextQueuedAsync();
+            }
+            SplitIntoLists();
         }
         catch (Exception)
         {
@@ -121,48 +195,157 @@
         }
     }
 
-    private async Task SortUp(SuggestionDto game)
+    private void SplitIntoLists()
     {
+        var all = UserSuggestions ?? [];
+        // One timeline, oldest first: finished games, then the one being played, then whatever is
+        // queued after it (queued games carry their expected play date).
+        _locked = all
+            .Where(s => s.Status != SuggestionStatus.Pending)
+            .OrderBy(s => s.ActiveAtUtc)
+            .ThenBy(s => s.Order)
+            .ToList();
+
+        var pending = all.Where(s => s.Status == SuggestionStatus.Pending).OrderBy(s => s.Order).ToList();
+        _visible = pending.Where(s => !s.IsHidden).ToList();
+        _hidden = pending.Where(s => s.IsHidden).ToList();
+    }
+
+    private enum SlotKind { Card, Tail, Divider }
+
+    private record Slot(SlotKind Kind, bool InHiddenList, SuggestionDto? Game = null, int Position = 0);
+
+    private IEnumerable<Slot> PendingSlots()
+    {
+        for (int i = 0; i < _visible.Count; i++)
+            yield return new Slot(SlotKind.Card, false, _visible[i], i + 1);
+        yield return new Slot(SlotKind.Tail, false);
+        yield return new Slot(SlotKind.Divider, true);
+        foreach (var game in _hidden)
+            yield return new Slot(SlotKind.Card, true, game);
+        yield return new Slot(SlotKind.Tail, true);
+    }
+
+    private void StartDrag(SuggestionDto game)
+    {
+        _dragged = game;
+        _dropped = false;
+        _visibleBeforeDrag = _visible.ToList();
+        _hiddenBeforeDrag = _hidden.ToList();
+    }
+
+    /// Moves the dragged card into the hovered card's place as the pointer passes, so the lists
+    /// always show where the drop would land.
+    private void DragOverCard(SuggestionDto target)
+    {
+        if (_dragged == null || _dragged == target)
+            return;
+
+        var targetList = _visible.Contains(target) ? _visible : _hidden;
+        var targetIndex = targetList.IndexOf(target);
+        _visible.Remove(_dragged);
+        _hidden.Remove(_dragged);
+        targetList.Insert(targetIndex, _dragged);
+    }
+
+    private void DragOverTail(List<SuggestionDto> list)
+    {
+        if (_dragged == null || list.LastOrDefault() == _dragged)
+            return;
+
+        _visible.Remove(_dragged);
+        _hidden.Remove(_dragged);
+        list.Add(_dragged);
+    }
+
+    private async Task EndDrag()
+    {
+        if (_dragged == null)
+            return;
+        _dragged = null;
+
+        // Released outside the lists or cancelled with Esc: put everything back.
+        if (!_dropped)
+        {
+            _visible = _visibleBeforeDrag;
+            _hidden = _hiddenBeforeDrag;
+            return;
+        }
+
+        if (!_visible.SequenceEqual(_visibleBeforeDrag) || !_hidden.SequenceEqual(_hiddenBeforeDrag))
+            await SaveArrangement();
+    }
+
+    private async Task ToggleHidden(SuggestionDto game)
+    {
+        _visibleBeforeDrag = _visible.ToList();
+        _hiddenBeforeDrag = _hidden.ToList();
+
+        if (_visible.Remove(game))
+            _hidden.Add(game);
+        else if (_hidden.Remove(game))
+            _visible.Add(game);
+
+        await SaveArrangement();
+    }
+
+    private async Task SaveArrangement()
+    {
+        _saving = true;
+        _error = null;
+
         try
         {
-            var request = new ReorderSuggestionRequest
+            var result = await SuggestionApi.ArrangeMySuggestionsAsync(new ArrangeSuggestionsRequest
             {
-                SuggestionId = game.Id,
-                Direction = "up"
-            };
+                VisibleIds = _visible.Select(g => g.Id).ToList(),
+                HiddenIds = _hidden.Select(g => g.Id).ToList(),
+            });
+            if (!result.Success)
+                _error = result.ErrorMessage;
 
-            var result = await SuggestionApi.ReorderSuggestionAsync(request);
-            if (result.Success)
-            {
-                await LoadGames();
-            }
+            // Reload either way: the queue may have picked up a new game, and a rejected save
+            // means the page was out of date.
+            UserSuggestions = await SuggestionApi.GetMySuggestionsAsync();
+            NextQueued = await SuggestionApi.GetMyNextQueuedAsync();
+            SplitIntoLists();
         }
         catch (Exception)
         {
-            // Handle error
+            _error = "Couldn't save the new order. Try again.";
+            _visible = _visibleBeforeDrag;
+            _hidden = _hiddenBeforeDrag;
+        }
+        finally
+        {
+            _saving = false;
         }
     }
 
-    private async Task SortDown(SuggestionDto game)
+    private static string QueuedInText(DateTime queuedAtUtc)
     {
-        try
+        var hours = (int)(queuedAtUtc - DateTime.UtcNow).TotalHours;
+        return hours switch
         {
-            var request = new ReorderSuggestionRequest
-            {
-                SuggestionId = game.Id,
-                Direction = "down"
-            };
-
-            var result = await SuggestionApi.ReorderSuggestionAsync(request);
-            if (result.Success)
-            {
-                await LoadGames();
-            }
-        }
-        catch (Exception)
-        {
-            // Handle error
-        }
+            < 1 => "less than an hour",
+            1 => "1 hour",
+            _ => $"{hours} hours",
+        };
     }
 
+    private static string FormatDate(DateTime? utc) => utc?.ToLocalTime().ToString("yyyy-MM-dd") ?? "-";
+
+    private static string StatusLabel(SuggestionStatus status) => status switch
+    {
+        SuggestionStatus.Active => "Playing",
+        SuggestionStatus.Queued => "Queued",
+        _ => "Finished",
+    };
+
+    private static string StatusBadgeClass(SuggestionStatus status) => status switch
+    {
+        SuggestionStatus.Active => "badge badge-primary",
+        SuggestionStatus.Queued => "badge badge-secondary",
+        _ => "badge badge-ghost",
+    };
 }

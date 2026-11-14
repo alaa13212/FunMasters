@@ -65,10 +65,19 @@ public class SuggestionApiService(HttpClient http) : ISuggestionApiService
             ?? ApiResult.Fail("Failed to delete suggestion");
     }
 
-    public async Task<ApiResult> ReorderSuggestionAsync(ReorderSuggestionRequest request)
+    public async Task<ApiResult> ArrangeMySuggestionsAsync(ArrangeSuggestionsRequest request)
     {
-        var response = await http.PostAsJsonAsync("/api/suggestions/reorder", request);
+        var response = await http.PostAsJsonAsync("/api/suggestions/my/arrange", request);
         return await response.Content.ReadFromJsonAsync<ApiResult>()
-            ?? ApiResult.Fail("Failed to reorder suggestion");
+            ?? ApiResult.Fail("Failed to save the new order");
+    }
+
+    public async Task<NextQueuedDto?> GetMyNextQueuedAsync()
+    {
+        var response = await http.GetAsync("/api/suggestions/my/next-queued");
+        if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+            return null;
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<NextQueuedDto>();
     }
 }

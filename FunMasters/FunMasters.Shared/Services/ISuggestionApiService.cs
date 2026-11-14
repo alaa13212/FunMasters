@@ -14,5 +14,6 @@ public interface ISuggestionApiService
     Task<ApiResult<Guid>> CreateSuggestionAsync(CreateSuggestionRequest request);
     Task<ApiResult> UpdateSuggestionAsync(Guid id, UpdateSuggestionRequest request);
     Task<ApiResult> DeleteSuggestionAsync(Guid id);
-    Task<ApiResult> ReorderSuggestionAsync(ReorderSuggestionRequest request);
+    Task<ApiResult> ArrangeMySuggestionsAsync(ArrangeSuggestionsRequest request);
+    Task<NextQueuedDto?> GetMyNextQueuedAsync();
 }
