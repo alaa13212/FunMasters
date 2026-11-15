@@ -14,7 +14,7 @@ namespace FunMasters.Services;
 /// <see cref="ApplicationUser.CycleOrder"/> mid-rotation or a member being cast out afterwards —
 /// both of which would fool a rule that merely compared the incoming and outgoing orders.
 /// </summary>
-public class CycleService(ApplicationDbContext db, ILogger<CycleService> logger)
+public class CycleService(ApplicationDbContext db, LucianGalade lucianGalade, ILogger<CycleService> logger)
 {
     /// <summary>
     /// How long after a cycle closes before its Writer is settled. A cycle closes the instant
@@ -139,10 +139,25 @@ public class CycleService(ApplicationDbContext db, ILogger<CycleService> logger)
         if (due.Count == 0)
             return;
 
+        var named = new List<(int CycleNumber, Guid UserId, int GemCount)>();
         foreach (var cycle in due)
-            await SettleAsync(cycle);
+        {
+            var writer = await SettleAsync(cycle);
+            if (writer is { } w)
+                named.Add((cycle.CycleNumber, w.UserId, w.GemCount));
+        }
 
         await db.SaveChangesAsync();
+
+        // Announced only from this sweep: an admin's recompute corrects the record quietly.
+        foreach (var (cycleNumber, userId, gemCount) in named)
+        {
+            var writerName = await db.Users
+                .Where(u => u.Id == userId)
+                .Select(u => u.UserName)
+                .FirstOrDefaultAsync() ?? "Unknown";
+            await lucianGalade.SendCycleWriterAsync(cycleNumber, writerName, gemCount);
+        }
     }
 
     /// <summary>
@@ -164,7 +179,8 @@ public class CycleService(ApplicationDbContext db, ILogger<CycleService> logger)
         return ApiResult.Ok();
     }
 
-    private async Task SettleAsync(Cycle cycle)
+    /// <returns>The Writer and their gem count, or null when no gem was given in the cycle.</returns>
+    private async Task<(Guid UserId, int GemCount)?> SettleAsync(Cycle cycle)
     {
         var standings = await db.Gems
             .Where(g => g.Suggestion!.CycleNumber == cycle.CycleNumber)
@@ -191,6 +207,8 @@ public class CycleService(ApplicationDbContext db, ILogger<CycleService> logger)
         logger.LogInformation(
             "Cycle {CycleNumber} settled; Writer of the Cycle: {Winner}.",
             cycle.CycleNumber, winner?.UserId.ToString() ?? "none (no gems awarded)");
+
+        return winner == null ? null : (winner.UserId, winner.Count);
     }
 
     /// When the last title of a cycle concluded — used to close it at the right moment

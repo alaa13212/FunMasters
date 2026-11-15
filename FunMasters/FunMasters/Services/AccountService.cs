@@ -255,7 +255,7 @@ public class AccountService(
 
         // Criminal record, by the same rules the member roll and the reminder job use.
         var finishedGames = await OffenceRules.JudgeableFinishedGames(db)
-            .Select(s => new { s.Id, Cutoff = s.ActiveAtUtc ?? s.FinishedAtUtc!.Value })
+            .Select(s => new { s.Id, s.Title, s.FinishedAtUtc, Cutoff = s.ActiveAtUtc ?? s.FinishedAtUtc!.Value })
             .ToListAsync();
 
         var judgeableIds = finishedGames.Select(g => g.Id).ToHashSet();
@@ -270,6 +270,28 @@ public class AccountService(
             WeakReviews = reviewedRatings.Count(r =>
                 judgeableIds.Contains(r.SuggestionId) && !OffenceRules.IsVerdictSubstantial(r.Comment))
         };
+
+        // Lucian names what the record only counts. Gems are chased only where they can still sway a
+        // Writer, while the title's cycle is unsettled, so long-concluded titles never pile up here.
+        var missedVerdictTitles = finishedGames
+            .Where(g => OffenceRules.OwesVerdict(user, g.Cutoff) && !ratedSuggestionIds.Contains(g.Id))
+            .OrderByDescending(g => g.FinishedAtUtc)
+            .Select(g => g.Title)
+            .ToList();
+
+        var unspentGemTitles = await db.Suggestions
+            .Where(s => s.Status == SuggestionStatus.Finished
+                        && s.Ratings.Any(r => r.RaterId == userId)
+                        && s.Ratings.Any(r => r.RaterId != userId)
+                        && !db.Gems.Any(g => g.SuggestionId == s.Id && g.AwardedById == userId)
+                        && s.Cycle != null
+                        && s.Cycle.WriterSettledAtUtc == null)
+            .OrderByDescending(s => s.FinishedAtUtc)
+            .Select(s => s.Title)
+            .ToListAsync();
+
+        var lucianRemarks = LucianRemarks.ForMember(
+            user.UserName!, missedVerdictTitles, criminalRecord.WeakReviews, unspentGemTitles);
 
         var cycleWins = await db.Cycles
             .Where(c => c.WriterOfTheCycleUserId == userId)
@@ -314,6 +336,7 @@ public class AccountService(
             TotalGems = gemsByRating.Values.Sum(),
             CriminalRecord = criminalRecord,
             WriterOfTheCycleWins = cycleWins,
+            LucianRemarks = lucianRemarks,
             Comments = user.ReceivedComments
                 .OrderByDescending(c => c.CreatedAtUtc)
                 .Select(c => new FunMasterCommentDto

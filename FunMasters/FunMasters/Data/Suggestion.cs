@@ -37,6 +37,13 @@ public class Suggestion
 
     public ICollection<Rating> Ratings { get; set; } = [];
 
+    // Writer of this title: the member whose review on it drew the most gems, named
+    // LucianTriggers.TitleWriterDays after it concludes. Null until then, and for titles that
+    // concluded before titles had Writers; TitleWriterNamedAtUtc is stamped even when no gem was given.
+    public Guid? TitleWriterUserId { get; set; }
+    public int? TitleWriterGemCount { get; set; }
+    public DateTime? TitleWriterNamedAtUtc { get; set; }
+
     // Steam discount tracking — price in halalas (Steam minor unit, e.g. 4999 = 49.99 SAR)
     public int? LastKnownPriceSar { get; set; }
 }

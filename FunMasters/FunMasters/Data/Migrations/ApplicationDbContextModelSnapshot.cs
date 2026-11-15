@@ -281,6 +281,23 @@ namespace FunMasters.Data.Migrations
                     b.ToTable("HltbCache");
                 });
 
+            modelBuilder.Entity("FunMasters.Data.LucianTriggerSetting", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("LucianTriggerSettings");
+                });
+
             modelBuilder.Entity("FunMasters.Data.PendingNotification", b =>
                 {
                     b.Property<Guid>("Id")
@@ -314,6 +331,9 @@ namespace FunMasters.Data.Migrations
                         .HasColumnType("character varying(50000)");
 
                     b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LongReviewAnnouncedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("RaterId")
@@ -414,11 +434,22 @@ namespace FunMasters.Data.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<int?>("TitleWriterGemCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("TitleWriterNamedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("TitleWriterUserId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CycleNumber");
 
                     b.HasIndex("SuggestedById");
+
+                    b.HasIndex("TitleWriterUserId");
 
                     b.ToTable("Suggestions");
                 });
@@ -710,6 +741,11 @@ namespace FunMasters.Data.Migrations
                         .HasForeignKey("SuggestedById")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("FunMasters.Data.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("TitleWriterUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Cycle");
 

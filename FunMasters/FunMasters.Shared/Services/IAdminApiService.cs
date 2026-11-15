@@ -31,6 +31,4 @@ public interface IAdminApiService
     Task<List<CycleAdminDto>> GetCyclesAsync();
     Task<ApiResult> RecomputeCycleWriterAsync(int cycleNumber);
 
-    // Telegram
-    Task<ApiResult> SendTelegramMessageAsync(string text, Stream? imageStream, string? imageFileName, string? imageContentType);
 }

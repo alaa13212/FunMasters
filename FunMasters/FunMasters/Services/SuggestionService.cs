@@ -128,7 +128,9 @@ public class SuggestionService(
 
         if (suggestion == null) return null;
         var playtimes = await steamPlaytimeService.GetPlaytimesForSuggestionAsync(id);
-        return MapToDetailDto(suggestion, playtimes, await LoadGemStateAsync(suggestion));
+        var detail = MapToDetailDto(suggestion, playtimes, await LoadGemStateAsync(suggestion));
+        detail.LucianRemarks = await LoadLucianRemarksAsync(suggestion);
+        return detail;
     }
 
     public async Task<SuggestionDetailDto?> GetActiveSuggestionAsync()
@@ -442,6 +444,39 @@ public class SuggestionService(
                        && suggestion.Ratings.Any(r => r.RaterId == viewerId);
 
         return (countsByRating, myGemRatingId, canAward);
+    }
+
+    /// <summary>
+    /// Lucian speaks on a game page only once the title's Writer has been named: before that, members
+    /// still have time to deliver verdicts and award gems. Then he names who never did. Short reviews
+    /// are left to the member pages, so the game page stays clean.
+    /// </summary>
+    private async Task<List<string>> LoadLucianRemarksAsync(Suggestion suggestion)
+    {
+        if (suggestion.Status != SuggestionStatus.Finished || suggestion.TitleWriterNamedAtUtc == null)
+            return [];
+
+        // Owed by the same rule the criminal record uses.
+        var cutoff = OffenceRules.Cutoff(suggestion);
+        var raterIds = suggestion.Ratings.Select(r => r.RaterId).ToList();
+        var unratedNames = await db.Users
+            .Where(u => CouncilStatusRoles.MustReview.Contains(u.CouncilStatus)
+                        && u.RegistrationDateUtc <= cutoff
+                        && !raterIds.Contains(u.Id))
+            .OrderBy(u => u.UserName)
+            .Select(u => u.UserName ?? "Unknown")
+            .ToListAsync();
+
+        var awardedBy = (await db.Gems
+            .Where(g => g.SuggestionId == suggestion.Id)
+            .Select(g => g.AwardedById)
+            .ToListAsync()).ToHashSet();
+        var unspentNames = GemRules.UnspentGemHolders(suggestion.Ratings, awardedBy)
+            .Select(r => r.Rater?.UserName ?? "Unknown")
+            .OrderBy(n => n)
+            .ToList();
+
+        return LucianRemarks.ForTitle(unratedNames, unspentNames);
     }
 
     private SuggestionDetailDto MapToDetailDto(

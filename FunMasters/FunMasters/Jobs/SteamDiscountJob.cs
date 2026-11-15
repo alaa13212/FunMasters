@@ -43,7 +43,6 @@ public class SteamDiscountJob : BackgroundService
         var steamStore = scope.ServiceProvider.GetRequiredService<SteamStoreService>();
         var steamService = scope.ServiceProvider.GetRequiredService<SteamService>();
         var lucian = scope.ServiceProvider.GetRequiredService<LucianGalade>();
-        var telegram = scope.ServiceProvider.GetRequiredService<TelegramService>();
 
         var queuedWithSteam = await db.Suggestions
             .Where(s => s.Status == SuggestionStatus.Queued && s.SteamLink != null)
@@ -132,9 +131,7 @@ public class SteamDiscountJob : BackgroundService
 
         if (toNotify.Count == 0) return;
 
-        var message = LucianGalade.BuildDiscountMessage(
-            toNotify.Select(g => (g.Title, g.AppId, g.Price)).ToList());
-        await telegram.SendMessageAsync(message);
+        await lucian.SendDiscountAsync(toNotify.Select(g => (g.Title, g.AppId, g.Price)).ToList());
         _logger.LogInformation("Sent discount notification for {Count} game(s): {Titles}",
             toNotify.Count, string.Join(", ", toNotify.Select(g => g.Title)));
     }

@@ -132,6 +132,13 @@
                     </div>
                 </div>
                 }
+
+                @if (_profile.LucianRemarks.Count > 0)
+                {
+                    <div class="mt-4">
+                        <LucianSays Remarks="_profile.LucianRemarks" Stern="true"/>
+                    </div>
+                }
             </div>
         </div>
 

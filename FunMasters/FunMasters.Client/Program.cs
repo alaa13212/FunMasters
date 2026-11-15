@@ -27,5 +27,6 @@ builder.Services.AddScoped<ISteamApiService, SteamApiService>();
 builder.Services.AddScoped<IGemApiService, GemApiService>();
 builder.Services.AddScoped<IMemberApiService, MemberApiService>();
 builder.Services.AddScoped<IPublicDataApiService, PublicDataApiService>();
+builder.Services.AddScoped<ILucianApiService, LucianApiService>();
 
 await builder.Build().RunAsync();

@@ -20,6 +20,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<FunMasterComment> FunMasterComments { get; set; }
     public DbSet<HltbCache> HltbCache { get; set; }
     public DbSet<Gem> Gems { get; set; }
+    public DbSet<LucianTriggerSetting> LucianTriggerSettings { get; set; }
     
     
     protected override void OnModelCreating(ModelBuilder builder)
@@ -104,6 +105,14 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 .OnDelete(DeleteBehavior.SetNull);
         });
 
+        // No navigation: Suggestion already reaches ApplicationUser through SuggestedBy, and a second
+        // navigation would leave EF guessing which one ApplicationUser.Suggestions belongs to.
+        builder.Entity<Suggestion>()
+            .HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(s => s.TitleWriterUserId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         var utcConverter = new ValueConverter<DateTime, DateTime>(
             v => v.Kind == DateTimeKind.Utc ? v : DateTime.SpecifyKind(v, DateTimeKind.Utc),
             v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
@@ -123,6 +132,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<Cycle>().Property(e => e.StartAtUtc).HasConversion(utcConverter);
         builder.Entity<Cycle>().Property(e => e.EndAtUtc).HasConversion(utcConverter);
         builder.Entity<Cycle>().Property(e => e.WriterSettledAtUtc).HasConversion(utcConverter);
+        builder.Entity<Suggestion>().Property(e => e.TitleWriterNamedAtUtc).HasConversion(utcConverter);
+        builder.Entity<Rating>().Property(e => e.LongReviewAnnouncedAtUtc).HasConversion(utcConverter);
+        builder.Entity<LucianTriggerSetting>().Property(e => e.UpdatedAtUtc).HasConversion(utcConverter);
     }
     
 }

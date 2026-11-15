@@ -24,9 +24,11 @@
     </fieldset>
     <fieldset>
         <legend class="fieldset-legend">Comment</legend>
-        <InputTextArea @bind-Value="Model.Comment"
-                       id="@("rate-comment-" + FormName)"
-                       class="textarea min-h-24 w-full" placeholder="Optional"/>
+        @* A plain textarea rather than InputTextArea: the word counter below needs every keystroke. *@
+        <textarea @bind="Model.Comment" @bind:event="oninput"
+                  id="@("rate-comment-" + FormName)"
+                  class="textarea min-h-24 w-full" placeholder="Your review"></textarea>
+        <p class="text-xs mt-1 @CounterClass" aria-live="polite">@CounterText</p>
     </fieldset>
     <div class="form-floating mb-3">
         <label for="@("rate-comment-" + FormName)" class="form-label"></label>
@@ -70,6 +72,27 @@
     [Parameter, EditorRequired] public EventCallback OnValidSubmit { get; set; }
 
     private bool _active;
+
+    private int WordCount => ReviewRules.CountWords(Model.Comment);
+
+    private static string Words(int n) => n == 1 ? "1 word" : $"{n} words";
+
+    /// Counted by the same rule the server judges reviews by, so the counter and Lucian always agree.
+    private string CounterText => WordCount switch
+    {
+        < ReviewRules.MinReviewWords =>
+            $"🚨 {Words(WordCount)}. The Council considers fewer than {ReviewRules.MinReviewWords} words lacking substance.",
+        < ReviewRules.LongReviewWords =>
+            $"{Words(WordCount)}. {ReviewRules.LongReviewWords - WordCount} more and Lucian takes notice.",
+        _ => $"{Words(WordCount)}. Lucian will bring this review to the Council's attention."
+    };
+
+    private string CounterClass => WordCount switch
+    {
+        < ReviewRules.MinReviewWords => "text-error font-semibold",
+        < ReviewRules.LongReviewWords => "opacity-70",
+        _ => "text-primary font-semibold"
+    };
 
     private void Engage() => _active = true;
     private void Release() => _active = false;

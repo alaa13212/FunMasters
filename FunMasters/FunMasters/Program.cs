@@ -33,6 +33,7 @@ builder.Services.AddHostedService<WeeklyDigestJob>();
 builder.Services.AddHostedService<PlaytimeShamingJob>();
 builder.Services.AddHostedService<PlaytimeMilestoneJob>();
 builder.Services.AddHostedService<QuarterlyDigestJob>();
+builder.Services.AddHostedService<GemCeremonyJob>();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
                        throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
@@ -117,6 +118,7 @@ builder.Services.AddScoped<IHltbApiService, HltbApiService>();
 builder.Services.AddScoped<IGemApiService, GemService>();
 builder.Services.AddScoped<IMemberApiService, MemberService>();
 builder.Services.AddScoped<IPublicDataApiService, PublicDataService>();
+builder.Services.AddScoped<ILucianApiService, LucianCabinetService>();
 
 var app = builder.Build();
 
@@ -174,6 +176,7 @@ app.MapSteamEndpoints();
 app.MapGemEndpoints();
 app.MapMemberEndpoints();
 app.MapPublicDataEndpoints();
+app.MapLucianEndpoints();
 
 using (var scope = app.Services.CreateScope()) {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
