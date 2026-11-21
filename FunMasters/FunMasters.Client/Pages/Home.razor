@@ -5,6 +5,10 @@
 @inject IRatingApiService RatingApi
 
 <PageTitle>Fun Masters</PageTitle>
+@if (IsMedalDay)
+{
+    <HangingMedal/>
+}
 <div class="m-5">
     @if (_loading)
     {
@@ -146,6 +150,20 @@
     [PersistentState] public List<NeedRatingModel>? NeedsRating { get; set; }
     
     private bool _loading = true;
+
+    /// <summary>
+    /// The medal comes out on the front page every 16 August. Judged in the site's UTC+3 day so every
+    /// visitor sees it on the same day, and the prerender and the browser never disagree.
+    /// </summary>
+    private static bool IsMedalDay
+    {
+        get
+        {
+            var today = FunMastersTime.UtcNow + FunMastersTime.UtcPlus3;
+            return today is { Month: 8, Day: 16 };
+        }
+    }
+
     private SortingCriteria _sortBy = SortingCriteria.FinishDateDescending;
     
     [CascadingParameter] private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
