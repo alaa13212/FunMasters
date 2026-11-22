@@ -141,13 +141,14 @@ public class LucianGalade(
         string gameTitle,
         int daysRemaining,
         IEnumerable<string> absentMembers,
+        int totalMembers,
         bool isRepeat = false)
     {
         var members = absentMembers.ToList();
         if (members.Count == 0) return;
 
         await SendAsync(LucianTriggers.PlaytimeShaming,
-            BuildPlaytimeShamingMessage(gameTitle, daysRemaining, members, isRepeat));
+            BuildPlaytimeShamingMessage(gameTitle, daysRemaining, members, totalMembers, isRepeat));
     }
 
     public Task SendPlaytimeMilestoneAsync(string gameTitle, string userName, string milestone, int totalMinutes) =>
@@ -368,11 +369,21 @@ public class LucianGalade(
         string gameTitle,
         int daysRemaining,
         IReadOnlyList<string> absentMembers,
-        bool isRepeat)
+        int totalMembers = 0,
+        bool isRepeat = false)
     {
         var sb = Open();
 
-        if (absentMembers.Count == 1)
+        var allAbsent = totalMembers > 0 && absentMembers.Count == totalMembers;
+
+        if (allAbsent)
+        {
+            sb.AppendLine($"The Council notes with... interest... that <b>not a single sitting member</b> " +
+                          $"has yet to begin <b>{Escape(gameTitle)}</b>.");
+            sb.AppendLine("\nNot one. The Chief of Staff checked twice.");
+            sb.AppendLine("\nThe docket will not wait.");
+        }
+        else if (absentMembers.Count == 1)
         {
             sb.AppendLine($"{Escape(absentMembers[0])}, the Council notes with... interest... " +
                           $"that you have yet to begin <b>{Escape(gameTitle)}</b>.");

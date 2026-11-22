@@ -111,7 +111,12 @@ public class PlaytimeShamingJob : BackgroundService
 
         if (absentMembers.Count > 0)
         {
-            await lucian.SendPlaytimeShamingAsync(active.Title, daysRemaining, absentMembers, isRepeat: isTwoDaysLeft);
+            await lucian.SendPlaytimeShamingAsync(
+                active.Title,
+                daysRemaining,
+                absentMembers,
+                totalMembers: members.Count,
+                isRepeat: isTwoDaysLeft);
         }
     }
 }
