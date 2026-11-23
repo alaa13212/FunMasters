@@ -1,0 +1,88 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@* A medal on a thread, pinned near the top of the page. The pin and the medal can both be dragged;
+   hanging-medal.js runs the physics and moves the parts below. Hidden until the script takes over,
+   since the prerendered markup has no positions yet. The sprites live in wwwroot/images/medal —
+   replace those files to change the art; the script sizes everything from the images. *@
+
+@* A 1px box pinned to the page's top-left corner with its drawing spilling out of it: it scrolls
+   with the page like any other content, yet takes up no room and never stretches the page. *@
+<svg @ref="_svg" class="absolute top-0 left-0 w-px h-px overflow-visible pointer-events-none select-none z-20 invisible" aria-hidden="true">
+    <defs>
+        <radialGradient id="fm-pin-head" cx="35%" cy="35%" r="75%">
+            <stop offset="0%" stop-color="#f4f4f5"/>
+            <stop offset="55%" stop-color="#a1a1aa"/>
+            <stop offset="100%" stop-color="#3f3f46"/>
+        </radialGradient>
+        <filter id="fm-medal-shadow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="5" stdDeviation="3" flood-opacity="0.5"/>
+        </filter>
+        @* Sized by the script once it knows the image's proportions. *@
+        <pattern id="fm-thread-texture" patternUnits="userSpaceOnUse">
+            <image data-part="thread-image" href="@Assets["images/medal/thread.png"]" preserveAspectRatio="none"/>
+        </pattern>
+    </defs>
+
+    <g data-part="thread-segments"></g>
+
+    @* The shadow sits on an untransformed wrapper so it always falls downward, whatever the medal's rotation. *@
+    <g filter="url(#fm-medal-shadow)">
+        <g data-part="medal" class="pointer-events-auto cursor-grab" style="touch-action: none">
+            @* Sized by the script once it knows the image's proportions. *@
+            <image data-part="face-image" href="@Assets["images/medal/face.png"]" preserveAspectRatio="none"/>
+        </g>
+
+        <g data-part="pin" class="pointer-events-auto cursor-grab" style="touch-action: none">
+            @* Larger invisible hit area — the visible head is too small to grab comfortably, especially on touch. *@
+            <circle r="18" fill="transparent"/>
+            <circle r="6.5" fill="url(#fm-pin-head)"/>
+        </g>
+    </g>
+</svg>
+
+@code {
+    private ElementReference _svg;
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _medal;
+    private bool _disposed;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        _module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/hanging-medal.js");
+        _medal = await _module.InvokeAsync<IJSObjectReference>("attach", _svg);
+
+        // attach waits for the sprites to load, so the page may have been left in the meantime.
+        if (_disposed)
+            await DisposeAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        try
+        {
+            if (_medal != null)
+            {
+                var medal = _medal;
+                _medal = null;
+                await medal.InvokeVoidAsync("dispose");
+                await medal.DisposeAsync();
+            }
+
+            if (_module != null)
+            {
+                var module = _module;
+                _module = null;
+                await module.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            // The page is already gone; nothing left to clean up.
+        }
+    }
+}

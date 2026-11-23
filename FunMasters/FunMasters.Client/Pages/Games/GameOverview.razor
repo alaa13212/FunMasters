@@ -18,6 +18,10 @@
     else if (Game != null)
     {
         <PageTitle>@Game.Suggestion.Title</PageTitle>
+        @if (HasMedal(Game.Suggestion.Title))
+        {
+            <HangingMedal/>
+        }
         <div class="flex items-start flex-col lg:flex-row gap-5">
             <div class="card bg-base-200 shadow-md flex-none w-full lg:w-128 @("@container")">
                 <figure class="max-h-[340px] hover:max-h-[700px] can-hover:max-h-[700px] transition-all duration-300">
@@ -484,6 +488,14 @@
             }
         }
     }
+
+    /// <summary>
+    /// The one game that gets the hanging medal. Matched on the title with case and punctuation
+    /// stripped, so it holds whether the entry was saved as "Is This Seat Taken?" or without the "?".
+    /// </summary>
+    private static bool HasMedal(string title) =>
+        new string(title.Where(char.IsLetterOrDigit).ToArray())
+            .Equals("isthisseattaken", StringComparison.OrdinalIgnoreCase);
 
     private string HltbLink()
     {
