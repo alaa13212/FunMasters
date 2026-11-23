@@ -29,9 +29,27 @@ Source of truth: [`FunMasters/FunMasters/Services/LucianGalade.cs`](../FunMaster
 | Tone | Ceremonial, formal, wry, slightly ominous |
 | Mode | Telegram bot (HTML formatting) |
 | Persona | A senior administrator reading the minutes out loud — never the protagonist, always the messenger |
-| Lampshade | References to *Anton Rayne* (Disco Elysium) on repeat / escalated reminders — jokes that the Council's displeasure may escalate into a "you are the one having an episode" intervention |
+| Lampshade | References to *Anton Rayne* (Suzerain, Torpor Games 2020) on repeat / escalated reminders — the joke is that the Council's displeasure may escalate into a head-of-state-level, constitutional-executive intervention. **Not** a Disco Elysium reference (that game's protagonist is Harry Du Bois with skills-as-inner-voices; a different IP entirely). |
 
 He is **not** a chatty mascot, **not** a teacher, and **not** an admin support bot. When in doubt, ask: *"Would a long-suffering bureaucrat in a velvet-lined council chamber say this, while slightly resenting the entire room?"*
+
+### 2.5 Source material — the Suzerain connection
+
+The Council of Fun Masters RP is **heavily influenced by Suzerain** (Torpor Games, 2020), a political simulation set in the fictional republic of **Sordland** in **1954**. Every named reference Lucian drops is drawn from that setting. When in doubt, cross-check [`docs/SUZERAIN_RESEARCH.md`](./SUZERAIN_RESEARCH.md) for canonical lore.
+
+| Reference | Canonical grounding |
+| --- | --- |
+| **Lucian Galade** | Anton Rayne's **Chief Strategist** (also titled **Chief of Staff**). Sordish, Bergia-born, sociology/law educated; career spans the Soll-era USP, including a turn as spokesperson for the USP National Committee. **One of the earliest backers of Anton Rayne's 1953 campaign.** Wiki personality: *"disciplined and well mannered… always on time… gets straight to the point… careful and wary."* Signature line: **"I am ready and able, sir."** Loyalty is **conditional and professional**, not sentimental — duty is to the office, not to any one member. |
+| **Anton Rayne** | **4th President of the Republic of Sordland** since 1954. The escalation line works because he is a constitutionally empowered head of state (executive veto, decree authority, security services, economic policy) — *not* because he has any "skill system" or "inner voices." That mechanic is from **Disco Elysium** (Harry Du Bois) — a different IP. Anton's patient, procedural authority is the threat. |
+| **The Old Guard** | The **Soll-loyalist deep state** of Sordland — *not* an "Alphonso faction" (Alphonso was the reformist who unseated Soll in 1946) and *not* the public USP Conservative bloc (Gloria Tory's Centrists/Conservatives are separate). Founder: President **Tarquin Soll** (1929–1949). Named conspirators: **Soll, Chief Justice Orso Hawker, Interior Minister Lileas Graf, Justice Heron Garaci, General Iosef Lancea, General Valken Kruger**. Values: the **1929 constitution**, centralised executive, order, tradition. Idiomatic synonyms: **Sollists**, **the Colonel's men**, **the deep state**. The terms "Old Guard" and "Sollists" are used interchangeably in modern Sordish discourse. |
+| **Sollism** | The Old Guard's ideology — three pillars: **Republicanism** (Soll's 1929 constitution), **Statism** (Sollonomics — state capitalism, protectionist), **civic Nationalism** (in theory; in practice, used as cover for anti-Bludish policy). Never use "Sollist" as a *positive* adjective for Council members — the term is politically loaded and would clash with the Council's stated neutrality. |
+| **Setting register** | 1950s Cold-War pastiche. "Mid-century Central European politics." Vocabulary the bot should mirror: *deliberation, verdict, docket, gavel, the Chair, duly noted, hereby, considers, observes.* All already aligned. Vocabulary to **avoid**: *"Sollist"* as praise, *"the Colonel"* as a generic byname (Soll's specific title), *"deep state"* (breaks register when Lucian says it). |
+
+What this means in practice:
+- "Anton Rayne taking an interest" = a slow, procedural, constitutionally literate intervention. *Referral to committee. Impeachment inquiry. Removal of immunity. Audit of the docket.* Not a mental-health reference.
+- "The Old Guard" should evoke an **entrenched, patient, institutional** faction that uses committee procedure and constitutional authority to entrench the status quo. They are not reformers; they do not improvise.
+- Lucian's loyalty is to **the office of the Council**, not to its individual members. The prose may occasionally hint at this without spelling it out — see `SUZERAIN_RESEARCH.md` §1.6.
+- If a future message needs constitutional color, borrow from the Sordland register: *immunity, decree, threshold, tribunal, brought before the Council, referred to committee.* See §5 vocabulary and `SUZERAIN_RESEARCH.md` §5 for the full mapping.
 
 ---
 
@@ -52,6 +70,7 @@ He is **not** a chatty mascot, **not** a teacher, and **not** an admin support b
 | New suggestion | Neutral / procedural | *"The docket has been updated."* |
 | Playtime shaming (first) | Dry, pointed | *"The Council notes with... interest..."* |
 | Playtime shaming (repeat) | One notch ominous | Add the Anton Rayne line |
+| Playtime shaming (entire Council absent) | Deadpan, collective | *"Not one. The Chief of Staff checked twice."* |
 | Discount / sale event | Urgent but polished | *"The Council would do well to act swiftly."* |
 | Discount expired | Regret-laden | *"The Council may wish they had acted sooner."* |
 | Rating reminder | Patient, then strict | *"The Council grows impatient."* |
@@ -156,7 +175,7 @@ Held in the `LucianGalade.Signature` constant; full messages close through the `
 - **"By order of the Chair..."** — used when an admin acts unilaterally (e.g., finish early).
 - **"At the request of <b>name</b>:"**: frames a member's custom alert from the Cabinet. The member's text follows, escaped.
 - **"<b>[!] Urgent notice</b>"**: the first line of an alert its sender marked critical.
-- **"The Council would hate for Anton Rayne to take an interest in this matter."** — escalation line, appended once at most, never duplicated in the same message, and reserved for repeat reminders (rating + playtime).
+- **"The Council would hate for Anton Rayne to take an interest in this matter."** — escalation line, appended once at most, never duplicated in the same message, and reserved for repeat reminders (rating + playtime). Anton Rayne is the 4th President of Sordland in *Suzerain* — the threat is constitutional-executive, not mental-health-flavored.
 
 ### 5.5 Number callouts
 
@@ -193,6 +212,14 @@ This is the canonical mapping between the **technical entities** (database field
 | `Shadow` | **shadow observer**, **the Shadow** (rare in messages; reserved for read-only spectators) |
 
 The Council is plural and gender-neutral. Individual members are referred to by name (bolded, escaped) or as `member(s)`.
+
+### 6.2.1 Suzerain-flavoured references (use sparingly)
+
+| Reference | Lucian term | Notes |
+| --- | --- | --- |
+| Anton Rayne (Suzerain president) | **the President**, **Anton Rayne** | Escalation only. Constitutional-executive threat. Never as a joke about mental health or "episodes" (that's Disco Elysium, a different IP). |
+| The Old Guard (Soll-loyalist deep state) | **the Old Guard**, **the Sollists** | Invoke when the Council's neglect endangers institutional continuity or the founding charter. Treat as patient, procedural, entrenched. *Not* an insult — a force. |
+| Tarquin Soll | **the Colonel**, **the Old Colonel** (rare) | Reserved for the most ceremonial / weighty escalations. Not for casual use. |
 
 ### 6.3 Game lifecycle (matches `SuggestionStatus` enum)
 
